@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f5f5f3;
+  --surface: #ffffff;
+  --surface-2: #f0f0ed;
+  --border: #e4e3df;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #8a8984;
+  --brand: #2a78d6;
+  --brand-ink: #ffffff;
+  --up: #d63a3a;
+  --down: #2a68d6;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-other: #a9a8a2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111110;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #2f2f2c;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --muted: #8d8c86;
+    --brand: #3987e5;
+    --up: #f06464;
+    --down: #5b9af0;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-other: #6b6a65;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-feature-settings: "tnum";
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card {
+  @apply rounded-2xl border border-line bg-surface;
+}
+.input {
+  @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-base outline-none sm:text-sm focus:border-brand focus:ring-2 focus:ring-brand/20;
+}
+.label {
+  @apply mb-1 block text-xs font-medium text-ink-2;
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50;
+}
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 bg-brand text-white hover:opacity-90;
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 border border-line bg-surface text-ink hover:bg-surface-2;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 text-up hover:bg-up/10;
+}

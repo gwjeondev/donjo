@@ -1,0 +1,109 @@
+// 시세 조회 + DB 캐시. 외부 API 장애 시 마지막으로 저장된 값을 사용한다.
+import "server-only";
+import { prisma } from "../db";
+import { addDays, FX_SYMBOL, type PriceSeries } from "../performance";
+import { provider } from ".";
+import type { Quote } from "./types";
+
+const QUOTE_TTL_MS = 10 * 60 * 1000;
+const BARS_TTL_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_USD_KRW = 1350;
+
+const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
+const fromDate = (d: Date) => d.toISOString().slice(0, 10);
+const todayStr = () => fromDate(new Date());
+
+export async function getQuotes(symbols: string[]): Promise<Map<string, Quote>> {
+  const unique = [...new Set(symbols)];
+  const cached = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } } });
+  const bySymbol = new Map(cached.map((c) => [c.symbol, c]));
+  const now = Date.now();
+
+  const results = await Promise.all(
+    unique.map(async (symbol): Promise<Quote | null> => {
+      const c = bySymbol.get(symbol);
+      const fresh = c?.quoteFetchedAt && now - c.quoteFetchedAt.getTime() < QUOTE_TTL_MS;
+      if (!fresh) {
+        try {
+          const q = await provider.quote(symbol);
+          await prisma.symbolCache.upsert({
+            where: { symbol },
+            create: { symbol, price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: new Date() },
+            update: { price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: new Date() },
+          });
+          return q;
+        } catch (e) {
+          console.warn(`[market] quote 실패 ${symbol}:`, (e as Error).message);
+        }
+      }
+      if (c?.price == null) return null;
+      return {
+        symbol,
+        price: Number(c.price),
+        previousClose: c.previousClose == null ? null : Number(c.previousClose),
+        currency: c.currency,
+      };
+    }),
+  );
+  return new Map(results.filter((q): q is Quote => q !== null).map((q) => [q.symbol, q]));
+}
+
+export async function getUsdKrw(): Promise<{ rate: number; live: boolean }> {
+  const q = (await getQuotes([FX_SYMBOL])).get(FX_SYMBOL);
+  return q ? { rate: q.price, live: true } : { rate: DEFAULT_USD_KRW, live: false };
+}
+
+/** 일봉 캐시를 갱신 (마지막 저장일 1주 전부터 다시 받아 수정 종가를 반영) */
+async function refreshBars(symbol: string, from: string) {
+  const cache = await prisma.symbolCache.findUnique({ where: { symbol } });
+  const first = await prisma.priceBar.findFirst({ where: { symbol }, orderBy: { date: "asc" } });
+  const hasEarliest = first && fromDate(first.date) <= from;
+  if (hasEarliest && cache?.barsFetchedAt && Date.now() - cache.barsFetchedAt.getTime() < BARS_TTL_MS) return;
+
+  const last = await prisma.priceBar.findFirst({ where: { symbol }, orderBy: { date: "desc" } });
+  const start = hasEarliest && last ? addDays(fromDate(last.date), -7) : from;
+  try {
+    const bars = await provider.history(symbol, start);
+    await prisma.$transaction([
+      prisma.priceBar.deleteMany({ where: { symbol, date: { gte: toDate(start) } } }),
+      prisma.priceBar.createMany({
+        data: bars.map((b) => ({ symbol, date: toDate(b.date), close: b.close })),
+        skipDuplicates: true,
+      }),
+      prisma.symbolCache.upsert({
+        where: { symbol },
+        create: { symbol, barsFetchedAt: new Date() },
+        update: { barsFetchedAt: new Date() },
+      }),
+    ]);
+  } catch (e) {
+    console.warn(`[market] history 실패 ${symbol}:`, (e as Error).message);
+  }
+}
+
+export async function getPriceSeries(symbols: string[], from: string): Promise<PriceSeries> {
+  const unique = [...new Set([...symbols, FX_SYMBOL])];
+  await Promise.all(unique.map((s) => refreshBars(s, from)));
+  const bars = await prisma.priceBar.findMany({
+    where: { symbol: { in: unique }, date: { gte: toDate(addDays(from, -10)) } },
+    orderBy: { date: "asc" },
+  });
+  const series: PriceSeries = new Map();
+  for (const b of bars) {
+    if (!series.has(b.symbol)) series.set(b.symbol, new Map());
+    series.get(b.symbol)!.set(fromDate(b.date), Number(b.close));
+  }
+  return series;
+}
+
+/** 특정 날짜의 원달러 환율 (거래 입력 시 기본값) */
+export async function getUsdKrwOn(date: string): Promise<number | null> {
+  if (date >= todayStr()) return (await getUsdKrw()).rate;
+  const series = await getPriceSeries([], addDays(date, -7));
+  const fx = series.get(FX_SYMBOL);
+  if (!fx) return null;
+  const dates = [...fx.keys()].filter((d) => d <= date).sort();
+  return dates.length ? fx.get(dates.at(-1)!)! : null;
+}
+
+export { todayStr };

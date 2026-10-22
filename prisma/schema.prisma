@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  accounts     Account[]
+}
+
+/// 증권 계좌 (예: "키움 일반", "미래에셋 ISA")
+model Account {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  broker       String?
+  memo         String?
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+enum Market {
+  KOSPI
+  KOSDAQ
+  US
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+/// 매수/매도 기록. 가격은 종목의 현지 통화(KRW 또는 USD) 기준.
+model Transaction {
+  id        String    @id @default(cuid())
+  accountId String
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// Yahoo 형식 심볼 (005930.KS, 035720.KQ, AAPL)
+  symbol    String
+  name      String
+  market    Market
+  type      TradeType
+  quantity  Decimal   @db.Decimal(20, 6)
+  price     Decimal   @db.Decimal(20, 4)
+  fee       Decimal   @default(0) @db.Decimal(20, 4)
+  tax       Decimal   @default(0) @db.Decimal(20, 4)
+  /// 거래 시점 환율 (1 USD 당 KRW). KRW 종목은 1.
+  fxRate    Decimal   @default(1) @db.Decimal(20, 4)
+  tradeDate DateTime  @db.Date
+  memo      String?
+  createdAt DateTime  @default(now())
+
+  @@index([accountId, tradeDate])
+}
+
+/// 일별 종가 캐시 (환율 KRW=X 포함)
+model PriceBar {
+  symbol String
+  date   DateTime @db.Date
+  close  Decimal  @db.Decimal(20, 4)
+
+  @@id([symbol, date])
+}
+
+/// 심볼별 시세 캐시 상태
+model SymbolCache {
+  symbol         String    @id
+  price          Decimal?  @db.Decimal(20, 4)
+  previousClose  Decimal?  @db.Decimal(20, 4)
+  currency       String?
+  quoteFetchedAt DateTime?
+  barsFetchedAt  DateTime?
+}

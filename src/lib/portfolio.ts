@@ -1,0 +1,218 @@
+// 매수/매도 기록으로부터 보유 현황과 수익을 계산하는 순수 함수 모음.
+// 평균단가법(이동평균) 기준이며, 원화 환산 금액은 거래 시점 환율을 사용한다.
+
+export type Market = "KOSPI" | "KOSDAQ" | "US";
+export type TradeType = "BUY" | "SELL";
+
+export interface Trade {
+  id: string;
+  accountId: string;
+  symbol: string;
+  name: string;
+  market: Market;
+  type: TradeType;
+  quantity: number;
+  price: number;
+  fee: number;
+  tax: number;
+  /** 1 USD 당 KRW. KRW 종목은 1 */
+  fxRate: number;
+  /** YYYY-MM-DD */
+  tradeDate: string;
+  createdAt?: string;
+  memo?: string | null;
+}
+
+export interface Position {
+  accountId: string;
+  symbol: string;
+  name: string;
+  market: Market;
+  currency: "KRW" | "USD";
+  quantity: number;
+  /** 현지 통화 기준 평균단가 (수수료 포함) */
+  avgCost: number;
+  /** 현지 통화 기준 매입금액 */
+  costBasis: number;
+  /** 원화 기준 매입금액 (매수 시점 환율) */
+  costBasisKrw: number;
+  /** 원화 기준 실현손익 (매도 시점 환율) */
+  realizedPnlKrw: number;
+  /** 현지 통화 기준 실현손익 */
+  realizedPnl: number;
+}
+
+export const currencyOf = (market: Market): "KRW" | "USD" =>
+  market === "US" ? "USD" : "KRW";
+
+export function sortTrades<T extends Trade>(trades: T[]): T[] {
+  return [...trades].sort(
+    (a, b) =>
+      a.tradeDate.localeCompare(b.tradeDate) ||
+      (a.createdAt ?? "").localeCompare(b.createdAt ?? "") ||
+      a.id.localeCompare(b.id),
+  );
+}
+
+const key = (t: { accountId: string; symbol: string }) =>
+  `${t.accountId}|${t.symbol}`;
+
+/** 계좌·종목별 포지션 계산. 수량이 0이 된 종목도 실현손익 확인을 위해 남겨 둔다. */
+export function computePositions(trades: Trade[]): Position[] {
+  const map = new Map<string, Position>();
+  for (const t of sortTrades(trades)) {
+    let p = map.get(key(t));
+    if (!p) {
+      p = {
+        accountId: t.accountId,
+        symbol: t.symbol,
+        name: t.name,
+        market: t.market,
+        currency: currencyOf(t.market),
+        quantity: 0,
+        avgCost: 0,
+        costBasis: 0,
+        costBasisKrw: 0,
+        realizedPnlKrw: 0,
+        realizedPnl: 0,
+      };
+      map.set(key(t), p);
+    }
+    p.name = t.name;
+    const fx = p.currency === "USD" ? t.fxRate : 1;
+    if (t.type === "BUY") {
+      const cost = t.quantity * t.price + t.fee + t.tax;
+      p.quantity += t.quantity;
+      p.costBasis += cost;
+      p.costBasisKrw += cost * fx;
+    } else {
+      const qty = Math.min(t.quantity, p.quantity);
+      if (qty <= 0) continue;
+      const ratio = qty / p.quantity;
+      const soldCost = p.costBasis * ratio;
+      const soldCostKrw = p.costBasisKrw * ratio;
+      const proceeds = qty * t.price - t.fee - t.tax;
+      p.realizedPnl += proceeds - soldCost;
+      p.realizedPnlKrw += proceeds * fx - soldCostKrw;
+      p.quantity -= qty;
+      p.costBasis -= soldCost;
+      p.costBasisKrw -= soldCostKrw;
+      if (p.quantity < 1e-9) {
+        p.quantity = 0;
+        p.costBasis = 0;
+        p.costBasisKrw = 0;
+      }
+    }
+    p.avgCost = p.quantity > 0 ? p.costBasis / p.quantity : 0;
+  }
+  return [...map.values()];
+}
+
+/** 특정 시점까지의 보유 수량 (매도 초과분은 무시) */
+export function quantityAt(trades: Trade[], symbol: string, date: string): number {
+  return computePositions(
+    trades.filter((t) => t.symbol === symbol && t.tradeDate <= date),
+  ).reduce((s, p) => s + p.quantity, 0);
+}
+
+export interface ValuedPosition extends Position {
+  price: number | null;
+  previousClose: number | null;
+  /** 원화 평가금액 (시세가 없으면 매입금액) */
+  valueKrw: number;
+  unrealizedPnlKrw: number;
+  returnRate: number;
+  dayChangeKrw: number;
+  hasQuote: boolean;
+}
+
+export function valuePosition(
+  p: Position,
+  quote: { price: number; previousClose?: number | null } | undefined,
+  usdKrw: number,
+): ValuedPosition {
+  const fx = p.currency === "USD" ? usdKrw : 1;
+  const price = quote?.price ?? null;
+  const valueKrw = price != null ? p.quantity * price * fx : p.costBasisKrw;
+  const unrealizedPnlKrw = valueKrw - p.costBasisKrw;
+  const prev = quote?.previousClose ?? null;
+  return {
+    ...p,
+    price,
+    previousClose: prev,
+    valueKrw,
+    unrealizedPnlKrw,
+    returnRate: p.costBasisKrw > 0 ? unrealizedPnlKrw / p.costBasisKrw : 0,
+    dayChangeKrw: price != null && prev != null ? p.quantity * (price - prev) * fx : 0,
+    hasQuote: price != null,
+  };
+}
+
+export interface Summary {
+  valueKrw: number;
+  costBasisKrw: number;
+  unrealizedPnlKrw: number;
+  realizedPnlKrw: number;
+  totalPnlKrw: number;
+  returnRate: number;
+  dayChangeKrw: number;
+}
+
+export function summarize(positions: ValuedPosition[]): Summary {
+  const s = positions.reduce(
+    (acc, p) => {
+      acc.valueKrw += p.quantity > 0 ? p.valueKrw : 0;
+      acc.costBasisKrw += p.costBasisKrw;
+      acc.realizedPnlKrw += p.realizedPnlKrw;
+      acc.dayChangeKrw += p.dayChangeKrw;
+      return acc;
+    },
+    { valueKrw: 0, costBasisKrw: 0, realizedPnlKrw: 0, dayChangeKrw: 0 },
+  );
+  const unrealizedPnlKrw = s.valueKrw - s.costBasisKrw;
+  return {
+    ...s,
+    unrealizedPnlKrw,
+    totalPnlKrw: unrealizedPnlKrw + s.realizedPnlKrw,
+    returnRate: s.costBasisKrw > 0 ? unrealizedPnlKrw / s.costBasisKrw : 0,
+  };
+}
+
+/** 보유 수량을 초과하는 매도가 있으면 그 거래를 반환 */
+export function findOversell(trades: Trade[]): Trade | null {
+  const held = new Map<string, number>();
+  for (const t of sortTrades(trades)) {
+    const q = held.get(key(t)) ?? 0;
+    if (t.type === "BUY") held.set(key(t), q + t.quantity);
+    else {
+      if (t.quantity > q + 1e-9) return t;
+      held.set(key(t), q - t.quantity);
+    }
+  }
+  return null;
+}
+
+/** 여러 계좌의 같은 종목을 하나로 합친다 (전체 자산 보기용) */
+export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
+  const map = new Map<string, ValuedPosition>();
+  for (const p of positions) {
+    const m = map.get(p.symbol);
+    if (!m) {
+      map.set(p.symbol, { ...p, accountId: "*" });
+      continue;
+    }
+    m.quantity += p.quantity;
+    m.costBasis += p.costBasis;
+    m.costBasisKrw += p.costBasisKrw;
+    m.realizedPnl += p.realizedPnl;
+    m.realizedPnlKrw += p.realizedPnlKrw;
+    m.valueKrw += p.valueKrw;
+    m.unrealizedPnlKrw += p.unrealizedPnlKrw;
+    m.dayChangeKrw += p.dayChangeKrw;
+  }
+  for (const m of map.values()) {
+    m.avgCost = m.quantity > 0 ? m.costBasis / m.quantity : 0;
+    m.returnRate = m.costBasisKrw > 0 ? m.unrealizedPnlKrw / m.costBasisKrw : 0;
+  }
+  return [...map.values()];
+}
