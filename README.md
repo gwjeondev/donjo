@@ -63,11 +63,14 @@ npm run lint
 npm run build
 ```
 
-## 배포 (예: Vercel + Neon)
+## Vercel 배포
 
-1. Neon이나 Supabase에서 무료 PostgreSQL을 만들고 `DATABASE_URL`을 복사합니다.
-2. Vercel에 저장소를 연결하고 환경변수 `DATABASE_URL`, `AUTH_SECRET`을 설정합니다.
-3. 빌드 명령은 `prisma migrate deploy && next build`로 지정합니다.
+1. [vercel.com/new](https://vercel.com/new)에서 GitHub 저장소 `donjo`를 Import합니다. 프레임워크는 Next.js로 자동 인식됩니다.
+2. 프로젝트의 **Storage** 탭에서 **Neon (Postgres)** 를 만들어 연결합니다(무료). 연결하면 `DATABASE_URL`이 자동으로 들어갑니다.
+3. **Settings → Environment Variables**에 `AUTH_SECRET`을 추가합니다. 값은 `openssl rand -base64 32`로 만듭니다.
+4. Redeploy합니다. 빌드할 때 `vercel-build` 스크립트가 `prisma migrate deploy`로 테이블을 자동으로 만듭니다.
+
+Neon 대신 Supabase 같은 외부 Postgres를 쓰려면 2번 대신 `DATABASE_URL`을 직접 넣으면 됩니다.
 
 ## 웹앱(PWA)으로 설치
 
