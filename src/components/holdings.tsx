@@ -32,22 +32,22 @@ export function Holdings({
         <p className="card p-8 text-center text-sm text-muted">보유 중인 종목이 없습니다. 매수 기록을 추가해 보세요.</p>
       ) : (
         <div className="card overflow-hidden">
-          {/* PC(lg 이상): 표. 금액·숫자는 줄바꿈하지 않고, 종목명이 남는 폭을 쓰며 넘치면 말줄임 */}
-          <table className="hidden w-full whitespace-nowrap text-sm lg:table">
+          {/* PC(lg 이상): 표. 숫자 칸은 폭을 고정해 원화/달러 전환 시 칸이 움직이지 않게 하고, 종목명이 남는 폭을 쓰며 넘치면 말줄임 */}
+          <table className="hidden w-full table-fixed whitespace-nowrap text-sm lg:table [&_td]:overflow-hidden [&_td]:text-ellipsis">
             <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
               <tr>
                 <th className="px-4 py-2.5 text-left font-medium">종목</th>
-                <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell">보유수량</th>
-                <th className="px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
-                <th className="px-3 py-2.5 text-right font-medium">평가금액</th>
-                <th className="px-3 py-2.5 text-right font-medium">평가손익</th>
-                <th className="hidden px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
+                <th className="hidden w-28 px-3 py-2.5 text-right font-medium xl:table-cell">보유수량</th>
+                <th className="w-32 px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
+                <th className="w-36 px-3 py-2.5 text-right font-medium">평가금액</th>
+                <th className="w-36 px-3 py-2.5 text-right font-medium">평가손익</th>
+                <th className="hidden w-20 px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map(({ p, d }) => (
                 <tr key={`${p.accountId}-${p.symbol}`} className="hover:bg-surface-2/60">
-                  <td className="w-full max-w-0 px-4 py-3" title={p.name}>
+                  <td className="px-4 py-3" title={p.name}>
                     <div className="truncate font-medium">{p.name}</div>
                     <div className="truncate text-xs text-muted">
                       {MARKET_LABEL[p.market]} · {p.symbol.replace(/\.(KS|KQ)$/, "")}

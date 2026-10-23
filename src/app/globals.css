@@ -94,6 +94,25 @@ body {
   overflow-wrap: break-word;
 }
 
+/* 클릭할 수 있는 요소는 손가락 커서 (Tailwind 기본값은 버튼도 기본 커서) */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="radio"],
+  select:not(:disabled),
+  summary,
+  label[for],
+  input[type="date"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
 /* 공용 컴포넌트 스타일: components 레이어에 두어 개별 유틸리티(w-auto 등)로 덮어쓸 수 있게 한다 */
 @layer components {
   .card {
@@ -119,22 +138,38 @@ body {
   }
 }
 
-/* 화면 전환: 탭 방향에 따라 옆에서 밀려 들어온다 */
+/* 화면 전환: 탭 방향에 따라 옆에서 스르륵 밀려 들어온다 */
 @keyframes page-in-right {
-  from { opacity: 0; transform: translateX(28px); }
+  from { opacity: 0; transform: translateX(56px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes page-in-left {
-  from { opacity: 0; transform: translateX(-28px); }
+  from { opacity: 0; transform: translateX(-56px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes page-in-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.page-from-right { animation: page-in-right 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
-.page-from-left { animation: page-in-left 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
-.page-fade { animation: page-in-fade 0.25s ease-out backwards; }
+.page-from-right { animation: page-in-right 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+.page-from-left { animation: page-in-left 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+.page-fade { animation: page-in-fade 0.45s ease-out backwards; }
+
+/* 팝업: 배경은 서서히 어두워지고, 모바일은 아래에서 올라오고 PC는 살짝 커지며 나타난다. 닫힐 땐 반대로 */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheet-out { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(12px) scale(0.96); } }
+.dialog-backdrop { animation: fade-in 0.3s ease-out both; }
+.dialog-backdrop[data-closing] { animation: fade-out 0.25s ease-in both; }
+.dialog-panel { animation: sheet-in 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.dialog-panel[data-closing] { animation: sheet-out 0.25s ease-in both; }
+@media (min-width: 40rem) {
+  .dialog-panel { animation-name: pop-in; animation-duration: 0.3s; }
+  .dialog-panel[data-closing] { animation-name: pop-out; animation-duration: 0.22s; }
+}
 
 /* 테마 변경: 이전 화면이 서서히 사라지며 새 테마가 나타난다 (View Transitions) */
 ::view-transition-old(root),
@@ -151,7 +186,9 @@ html.theme-fading * {
 @media (prefers-reduced-motion: reduce) {
   .page-from-right,
   .page-from-left,
-  .page-fade { animation: none; }
+  .page-fade,
+  .dialog-backdrop,
+  .dialog-panel { animation: none !important; }
   ::view-transition-old(root),
   ::view-transition-new(root) { animation: none; }
 }

@@ -68,17 +68,17 @@ export function TradeList({
   return (
     <div className="card overflow-hidden">
       {/* PC(xl 이상): 표. 좁은 화면에서는 아래 카드 목록 */}
-      <table className="hidden w-full whitespace-nowrap text-sm xl:table">
+      <table className="hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis">
         <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
           <tr>
-            <th className="px-4 py-2.5 text-left font-medium">거래일</th>
-            {showAccount && <th className="px-3 py-2.5 text-left font-medium">계좌</th>}
+            <th className="w-28 px-4 py-2.5 text-left font-medium">거래일</th>
+            {showAccount && <th className="w-28 px-3 py-2.5 text-left font-medium">계좌</th>}
             <th className="px-3 py-2.5 text-left font-medium">종목</th>
-            <th className="px-3 py-2.5 text-center font-medium">구분</th>
-            <th className="px-3 py-2.5 text-right font-medium">수량</th>
-            <th className="px-3 py-2.5 text-right font-medium">단가</th>
-            <th className="px-3 py-2.5 text-right font-medium">거래금액</th>
-            <th className="px-2 py-2.5" />
+            <th className="w-16 px-3 py-2.5 text-center font-medium">구분</th>
+            <th className="w-28 px-3 py-2.5 text-right font-medium">수량</th>
+            <th className="w-32 px-3 py-2.5 text-right font-medium">단가</th>
+            <th className="w-36 px-3 py-2.5 text-right font-medium">거래금액</th>
+            <th className="w-20 px-2 py-2.5" />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -88,11 +88,11 @@ export function TradeList({
               <tr key={t.id} className="hover:bg-surface-2/60">
                 <td className="px-4 py-3 text-ink-2">{t.tradeDate}</td>
                 {showAccount && (
-                  <td className="max-w-32 truncate px-3 py-3 text-ink-2" title={accountName.get(t.accountId)}>
+                  <td className="truncate px-3 py-3 text-ink-2" title={accountName.get(t.accountId)}>
                     {accountName.get(t.accountId)}
                   </td>
                 )}
-                <td className="w-full max-w-0 px-3 py-3" title={t.name}>
+                <td className="px-3 py-3" title={t.name}>
                   <div className="truncate font-medium">{t.name}</div>
                   <div className="truncate text-xs text-muted">
                     {MARKET_LABEL[t.market]}

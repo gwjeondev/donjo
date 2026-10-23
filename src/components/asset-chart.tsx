@@ -32,7 +32,7 @@ export function AssetChart({ points }: { points: Point[] }) {
   const periodReturn = first && last ? (1 + last.cum) / (1 + first.cum) - 1 : 0;
 
   return (
-    <div className="card p-5">
+    <div className="card flex h-full flex-col p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="font-semibold">자산 추이</h2>
@@ -56,9 +56,9 @@ export function AssetChart({ points }: { points: Point[] }) {
         </div>
       </div>
       {data.length < 2 ? (
-        <p className="py-16 text-center text-sm text-muted">표시할 자산 기록이 아직 없습니다</p>
+        <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted">표시할 자산 기록이 아직 없습니다</p>
       ) : (
-        <div className="h-60">
+        <div className="h-60 min-h-60 xl:h-auto xl:flex-1" /* 옆 카드(자산 비중)가 더 길면 그 높이만큼 늘어난다 */>
           <ResponsiveContainer>
             <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <defs>

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
       </PageHeader>
       <div className="space-y-4">
         <SummaryCards summary={summary} />
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <AssetChart points={cumulative(perf.daily)} />
           <AllocationChart
             groups={[

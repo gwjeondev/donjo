@@ -28,7 +28,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="card p-5">
+    <div className="card @container p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-semibold">자산 비중</h2>
         <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
@@ -46,7 +46,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
       {total === 0 ? (
         <p className="py-12 text-center text-sm text-muted">데이터가 없습니다</p>
       ) : (
-        <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-center gap-4 @md:grid-cols-[180px_minmax(0,1fr)]">
           <div className="mx-auto h-44 w-44">
             <ResponsiveContainer>
               <PieChart>
@@ -81,7 +81,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="space-y-1.5 text-sm lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-1.5 lg:space-y-0">
+          <ul className="space-y-1.5 text-sm @3xl:grid @3xl:grid-cols-2 @3xl:gap-x-10 @3xl:gap-y-1.5 @3xl:space-y-0">
             {data.map((d, i) => (
               <li key={d.key} className="flex items-center gap-2">
                 <span className="size-2.5 shrink-0 rounded-sm" style={{ background: color(d.key === "__other" ? SLOTS : i) }} />

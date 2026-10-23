@@ -235,19 +235,45 @@ function TradeForm({
 }
 
 /** 입력 중 실수로 닫히지 않도록 X 버튼으로만 닫는다 (바깥 클릭·Esc 무시) */
+const DIALOG_EXIT_MS = 250;
+
+/** 입력 중 실수로 닫히지 않도록 X 버튼으로만 닫는다 (바깥 클릭·Esc 무시). 닫힐 때는 퇴장 애니메이션 후 제거 */
 export function Dialog({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: React.ReactNode }) {
-  if (!open) return null;
+  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+      return;
+    }
+    if (!mounted) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setClosing(true);
+    const t = window.setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+    }, reduce ? 0 : DIALOG_EXIT_MS);
+    return () => window.clearTimeout(t);
+  }, [open, mounted]);
+
+  if (!mounted) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+    <div
+      data-closing={closing || undefined}
+      className="dialog-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+    >
       <div
         role="dialog"
         aria-modal
         aria-label={title}
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:max-w-md sm:rounded-2xl"
+        data-closing={closing || undefined}
+        className="dialog-panel max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:max-w-md sm:rounded-2xl"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 text-ink-2" aria-label="닫기"><CloseIcon /></button>
+          <button onClick={onClose} className="p-1 text-ink-2" aria-label="닫기" disabled={closing}><CloseIcon /></button>
         </div>
         {children}
       </div>
