@@ -3,7 +3,10 @@ import "server-only";
 import type { Transaction } from "@prisma/client";
 import { prisma } from "./db";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
-import { aggregate, buildDailySeries } from "./performance";
+import { aggregate, benchmarkSeries, buildDailySeries } from "./performance";
+
+/** 수익률 비교용 지수 (Yahoo 심볼) */
+const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC" } as const;
 import { computePositions, summarize, valuePosition, type Trade } from "./portfolio";
 
 export function toTrade(t: Transaction): Trade {
@@ -54,15 +57,15 @@ export async function loadPerformance(userId: string, accountId?: string) {
     return { ...(await computePerformance(userId, accountId)), failed: false };
   } catch (e) {
     console.error("[performance] 계산 실패:", e);
-    return { daily: [], day: [], month: [], year: [], failed: true };
+    return { daily: [], benchmark: [], day: [], month: [], year: [], failed: true };
   }
 }
 
 async function computePerformance(userId: string, accountId?: string) {
   const trades = await loadTrades(userId, accountId);
-  if (trades.length === 0) return { daily: [], day: [], month: [], year: [] };
+  if (trades.length === 0) return { daily: [], benchmark: [], day: [], month: [], year: [] };
   const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
-  const prices = await getPriceSeries(trades.map((t) => t.symbol), from);
+  const prices = await getPriceSeries([...trades.map((t) => t.symbol), ...Object.values(BENCHMARKS)], from);
   const today = todayStr();
   // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다
   const quotes = await getQuotes([...new Set(trades.map((t) => t.symbol)), "KRW=X"]);
@@ -71,8 +74,13 @@ async function computePerformance(userId: string, accountId?: string) {
     prices.get(s)!.set(today, q.price);
   }
   const daily = buildDailySeries(trades, prices, today);
+  const benchmark = benchmarkSeries(
+    daily,
+    Object.fromEntries(Object.entries(BENCHMARKS).map(([k, sym]) => [k, prices.get(sym) ?? new Map<string, number>()])),
+  );
   return {
     daily,
+    benchmark,
     day: aggregate(daily, "day"),
     month: aggregate(daily, "month"),
     year: aggregate(daily, "year"),

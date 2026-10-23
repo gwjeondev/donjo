@@ -1,4 +1,5 @@
 import { AccountFilter } from "@/components/account-filter";
+import { BenchmarkChart } from "@/components/benchmark-chart";
 import { PageHeader } from "@/components/page-header";
 import { PerformanceView } from "@/components/performance-view";
 import { loadPerformance } from "@/lib/data";
@@ -21,7 +22,10 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         sub="일별 · 월별 · 연도별 자산 증가율"
         toolbar={<AccountFilter accounts={accounts} value={account} />}
       />
-      <PerformanceView rows={{ day: perf.day, month: perf.month, year: perf.year }} failed={perf.failed} />
+      <div className="space-y-4">
+        <BenchmarkChart points={perf.benchmark} />
+        <PerformanceView rows={{ day: perf.day, month: perf.month, year: perf.year }} failed={perf.failed} />
+      </div>
     </>
   );
 }

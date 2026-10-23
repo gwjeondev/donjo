@@ -161,3 +161,19 @@ describe("displayFigures", () => {
     expect(d).toMatchObject({ currency: "KRW", price: 77000, avgCost: 70000, value: 770000, pnl: 70000 });
   });
 });
+
+describe("benchmarkSeries", () => {
+  it("내 누적 수익과 지수를 같은 시작점(1)으로 맞춘다", async () => {
+    const { benchmarkSeries } = await import("../performance");
+    const pts = [
+      { date: "2026-01-05", value: 100, flow: 100, ret: 0 },
+      { date: "2026-01-06", value: 110, flow: 0, ret: 0.1 },
+      { date: "2026-01-07", value: 99, flow: 0, ret: -0.1 },
+    ];
+    const kospi = new Map([["2026-01-02", 2000], ["2026-01-06", 2100]]);
+    const rows = benchmarkSeries(pts, { kospi });
+    expect(rows.map((r) => r.mine)).toEqual([1, 1.1, 1.1 * 0.9]);
+    // 1/5는 직전 값(1/2의 2000)을 기준으로, 1/7은 1/6 값을 이어 쓴다
+    expect(rows.map((r) => r.kospi)).toEqual([1, 1.05, 1.05]);
+  });
+});

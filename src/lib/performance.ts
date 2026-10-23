@@ -165,3 +165,31 @@ export function cumulative(points: DailyPoint[]) {
     return { date: p.date, value: Math.round(p.value), cum: g - 1 };
   });
 }
+
+export interface BenchmarkPoint {
+  date: string;
+  /** 시작일 대비 누적 배수 (1 = 0%) */
+  mine: number;
+  [benchmark: string]: number | string;
+}
+
+/**
+ * 내 시간가중수익률과 지수(예: 코스피, S&P 500)를 같은 날짜 축의 누적 배수로 맞춘다.
+ * 지수 값이 없는 날은 직전 값을 쓰고, 첫 값이 나오기 전 날짜는 1로 둔다.
+ */
+export function benchmarkSeries(points: DailyPoint[], indices: Record<string, Map<string, number>>): BenchmarkPoint[] {
+  const names = Object.keys(indices);
+  const lookups = Object.fromEntries(names.map((n) => [n, carryForward(indices[n])]));
+  const base: Record<string, number | undefined> = {};
+  let g = 1;
+  return points.map((p) => {
+    g *= 1 + p.ret;
+    const row: BenchmarkPoint = { date: p.date, mine: g };
+    for (const n of names) {
+      const v = lookups[n](p.date);
+      if (v != null && base[n] == null) base[n] = v;
+      row[n] = v != null && base[n] ? v / base[n]! : 1;
+    }
+    return row;
+  });
+}
