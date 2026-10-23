@@ -2,7 +2,7 @@
 import "server-only";
 import { prisma } from "../db";
 import { addDays, FX_SYMBOL, type PriceSeries } from "../performance";
-import { provider } from ".";
+import { koreanSource, provider } from ".";
 import type { Quote } from "./types";
 
 const QUOTE_TTL_MS = 10 * 60 * 1000;
@@ -135,3 +135,86 @@ export async function getUsdKrwOn(date: string): Promise<number | null> {
 }
 
 export { todayStr };
+
+// ---------- 국내 종목 한글 이름 ----------
+
+const NAME_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** 조회 실패 시 하루 뒤 다시 시도하도록 기록 시각을 당겨 둔다 */
+const NAME_RETRY_MS = 24 * 60 * 60 * 1000;
+
+export const isKoreanSymbol = (symbol: string) => /\.(KS|KQ)$/.test(symbol);
+
+/** 국내 종목의 증권사 표기 이름 (DB 캐시, 30일마다 갱신). 못 구한 종목은 결과에 없다 */
+export async function getKoreanNames(symbols: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(symbols.filter(isKoreanSymbol))];
+  if (unique.length === 0) return new Map();
+  const cached = await prisma.symbolCache.findMany({
+    where: { symbol: { in: unique } },
+    select: { symbol: true, name: true, nameFetchedAt: true },
+  });
+  const names = new Map(cached.flatMap((c) => (c.name ? [[c.symbol, c.name] as const] : [])));
+  const fetchedAt = new Map(cached.map((c) => [c.symbol, c.nameFetchedAt]));
+  const stale = unique.filter((s) => {
+    const at = fetchedAt.get(s);
+    return !at || Date.now() - at.getTime() > NAME_TTL_MS;
+  });
+
+  for (let i = 0; i < stale.length; i += REFRESH_CONCURRENCY) {
+    await Promise.all(
+      stale.slice(i, i + REFRESH_CONCURRENCY).map(async (symbol) => {
+        let name: string | null = null;
+        try {
+          name = await koreanSource.name(symbol.slice(0, -3));
+        } catch (e) {
+          console.warn(`[market] 한글 이름 조회 실패 ${symbol}:`, (e as Error).message);
+        }
+        const at = name ? new Date() : new Date(Date.now() - NAME_TTL_MS + NAME_RETRY_MS);
+        await prisma.symbolCache
+          .upsert({
+            where: { symbol },
+            create: { symbol, name, nameFetchedAt: at },
+            update: { ...(name ? { name } : {}), nameFetchedAt: at },
+          })
+          .catch(() => {});
+        if (name) names.set(symbol, name);
+      }),
+    );
+  }
+  return names;
+}
+
+const hasHangul = (s: string) => /[가-힣]/.test(s);
+
+/**
+ * 사용자의 국내 종목 이름을 증권사 표기 한글 이름으로 바꾼다.
+ * 기본은 영문 이름(Yahoo 등에서 온 이름)만 바꾸고, 사용자가 정한 한글 이름은 그대로 둔다. all이면 전부 바꾼다.
+ * @returns 바꾼 종목 수
+ */
+export async function localizeStockNames(userId: string, { all = false } = {}): Promise<number> {
+  const rows = await prisma.transaction.findMany({
+    where: { account: { userId }, market: { in: ["KOSPI", "KOSDAQ"] } },
+    distinct: ["symbol", "name"],
+    select: { symbol: true, name: true },
+  });
+  // 종목별로 바꿀 대상 이름 목록 (all이 아니면 한글이 없는 이름만)
+  const replace = new Map<string, string[]>();
+  for (const r of rows) {
+    if (!all && hasHangul(r.name)) continue;
+    replace.set(r.symbol, [...(replace.get(r.symbol) ?? []), r.name]);
+  }
+  if (replace.size === 0) return 0;
+  const official = await getKoreanNames([...replace.keys()]);
+  let changed = 0;
+  for (const [symbol, name] of official) {
+    const from = (replace.get(symbol) ?? []).filter((n) => n !== name);
+    if (from.length === 0) continue;
+    const res = await prisma.transaction.updateMany({
+      where: { account: { userId }, symbol, name: { in: from } },
+      data: { name },
+    });
+    if (res.count) changed++;
+  }
+  return changed;
+}
+
+export { hasHangul };

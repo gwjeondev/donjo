@@ -1,5 +1,6 @@
 // 개발/테스트용 가짜 시세 (MARKET_DATA_PROVIDER=mock). 심볼마다 결정적인 랜덤워크를 만든다.
 import type { Market } from "../portfolio";
+import type { KoreanStockSource } from "./naver";
 import type { MarketDataProvider } from "./types";
 
 function hash(s: string) {
@@ -64,5 +65,30 @@ export const mockProvider: MarketDataProvider = {
     return SAMPLES.filter((s) => s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q)).map(
       (s) => ({ ...s, exchange: s.market }),
     );
+  },
+};
+
+// 개발/테스트용 국내 종목 한글 이름 (네이버 대신)
+const KR_NAMES: Record<string, string> = {
+  ...Object.fromEntries(SAMPLES.filter((s) => s.market !== "US").map((s) => [s.symbol.slice(0, 6), s.name])),
+  "381180": "TIGER 미국필라델피아반도체나스닥",
+  "379810": "KODEX 미국나스닥100",
+  "0193T0": "TIME 글로벌AI인공지능액티브",
+  "0091P0": "TIME 미국나스닥100채권혼합50액티브",
+  "456600": "TIME 글로벌AI인공지능액티브",
+};
+
+export const mockKoreanSource: KoreanStockSource = {
+  async search(query) {
+    const q = query.toLowerCase();
+    return Object.entries(KR_NAMES)
+      .filter(([code, name]) => name.toLowerCase().includes(q) || code.includes(q))
+      .map(([code, name]) => {
+        const market = SAMPLES.find((s) => s.symbol.startsWith(code))?.market ?? "KOSPI";
+        return { symbol: `${code}.${market === "KOSDAQ" ? "KQ" : "KS"}`, name, market, exchange: market };
+      });
+  },
+  async name(code) {
+    return KR_NAMES[code] ?? null;
   },
 };

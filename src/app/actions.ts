@@ -8,7 +8,7 @@ import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { fromCsv } from "@/lib/csv";
 import { loadTrades, toTrade } from "@/lib/data";
-import { getQuotes } from "@/lib/market/service";
+import { getKoreanNames, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
 import { FX_SYMBOL } from "@/lib/performance";
 import { computePositions, findOversell, sortTrades } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
@@ -246,6 +246,10 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   const existing = (await prisma.transaction.findMany({ where: { account: { userId } } })).map(toTrade);
   // 이미 있는 종목은 사용자가 쓰던 이름을 유지한다
   const knownName = new Map(sortTrades(existing).map((t) => [t.symbol, t.name]));
+  const englishKr = rows
+    .map((r) => normalizeSymbol(r.symbol, r.market))
+    .filter((sym, i) => isKoreanSymbol(sym) && !knownName.has(sym) && !hasHangul(rows[i].name));
+  const officialName = await getKoreanNames(englishKr).catch(() => new Map<string, string>());
   const keyOf = (t: { accountId: string; tradeDate: string; type: string; symbol: string; quantity: number; price: number }) =>
     [t.accountId, t.tradeDate, t.type, t.symbol, t.quantity, t.price].join("|");
   const seen = new Set(existing.map(keyOf));
@@ -255,7 +259,7 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       id: `csv-${i}`,
       accountId: accountId.get(r.account)!,
       symbol: normalizeSymbol(r.symbol, r.market),
-      name: knownName.get(normalizeSymbol(r.symbol, r.market)) ?? r.name,
+      name: knownName.get(normalizeSymbol(r.symbol, r.market)) ?? officialName.get(normalizeSymbol(r.symbol, r.market)) ?? r.name,
       market: r.market,
       type: r.type,
       quantity: r.quantity,
@@ -355,4 +359,12 @@ export async function renameStock(_: FormState, form: FormData): Promise<FormSta
   if (res.count === 0) return { error: "종목을 찾을 수 없습니다" };
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/** 모든 국내 종목 이름을 증권사 표기 한글 이름으로 바꾼다 (직접 정한 이름 포함) */
+export async function localizeAllStockNames(): Promise<FormState> {
+  const userId = await requireUserId();
+  const changed = await localizeStockNames(userId, { all: true });
+  revalidatePath("/", "layout");
+  return { ok: true, message: changed ? `${changed}개 종목 이름을 바꿨습니다` : "바꿀 종목이 없습니다" };
 }

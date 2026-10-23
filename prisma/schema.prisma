@@ -81,4 +81,7 @@ model SymbolCache {
   currency       String?
   quoteFetchedAt DateTime?
   barsFetchedAt  DateTime?
+  /// 국내 종목의 증권사 표기 한글 이름 (네이버 증권 기준)
+  name           String?
+  nameFetchedAt  DateTime?
 }

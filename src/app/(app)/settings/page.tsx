@@ -1,4 +1,5 @@
 import { ExportButton } from "@/components/csv-actions";
+import { LocalizeNamesButton } from "@/components/localize-names";
 import { PageHeader } from "@/components/page-header";
 import { PasswordForm, ProfileForm } from "@/components/settings-forms";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -36,6 +37,12 @@ export default async function SettingsPage() {
           <div className="max-w-xs">
             <ThemeToggle full />
           </div>
+        </Section>
+        <Section
+          title="종목 이름"
+          desc="국내 종목은 증권사(네이버 증권) 표기 이름으로 자동으로 바뀌어요. 직접 바꾼 한글 이름은 유지되며, 아래 버튼을 누르면 그것까지 모두 공식 이름으로 맞춥니다."
+        >
+          <LocalizeNamesButton />
         </Section>
         <Section
           title="데이터 백업"
