@@ -3,10 +3,11 @@ import "server-only";
 import type { Transaction } from "@prisma/client";
 import { prisma } from "./db";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
-import { aggregate, benchmarkSeries, buildDailySeries } from "./performance";
+import { MARKET_LABEL } from "./format";
+import { benchmarkSeries, buildDailySeries, trimSoldOut, type DailyPoint, type SeriesGroup } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
-const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC" } as const;
+const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC", nasdaq100: "^NDX" } as const;
 import { computePositions, summarize, valuePosition, type Trade } from "./portfolio";
 
 export function toTrade(t: Transaction): Trade {
@@ -52,18 +53,26 @@ export async function loadPortfolio(userId: string, accountId?: string) {
 }
 
 /** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */
-export async function loadPerformance(userId: string, accountId?: string) {
+export async function loadPerformance(userId: string, accountId?: string, opts: { breakdown?: boolean } = {}) {
   try {
-    return { ...(await computePerformance(userId, accountId)), failed: false };
+    return { ...(await computePerformance(userId, accountId, opts.breakdown ?? false)), failed: false };
   } catch (e) {
     console.error("[performance] 계산 실패:", e);
-    return { daily: [], benchmark: [], benchmarkMissing: [], day: [], month: [], year: [], failed: true };
+    return { ...EMPTY_PERFORMANCE, failed: true };
   }
 }
 
-async function computePerformance(userId: string, accountId?: string) {
+const EMPTY_PERFORMANCE = {
+  daily: [] as DailyPoint[],
+  benchmark: [] as ReturnType<typeof benchmarkSeries>,
+  benchmarkMissing: [] as string[],
+  byStock: [] as SeriesGroup[],
+  byAccount: [] as SeriesGroup[],
+};
+
+async function computePerformance(userId: string, accountId: string | undefined, breakdown: boolean) {
   const trades = await loadTrades(userId, accountId);
-  if (trades.length === 0) return { daily: [], benchmark: [], benchmarkMissing: [], day: [], month: [], year: [] };
+  if (trades.length === 0) return EMPTY_PERFORMANCE;
   const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
   const prices = await getPriceSeries([...trades.map((t) => t.symbol), ...Object.values(BENCHMARKS)], from);
   const today = todayStr();
@@ -82,12 +91,34 @@ async function computePerformance(userId: string, accountId?: string) {
   const benchmarkMissing = Object.entries(BENCHMARKS)
     .filter(([, sym]) => !(prices.get(sym)?.size))
     .map(([k]) => k);
-  return {
-    daily,
-    benchmark,
-    benchmarkMissing,
-    day: aggregate(daily, "day"),
-    month: aggregate(daily, "month"),
-    year: aggregate(daily, "year"),
-  };
+  if (!breakdown) return { ...EMPTY_PERFORMANCE, daily, benchmark, benchmarkMissing };
+
+  // 같은 계산을 종목 하나, 계좌 하나의 기록으로 다시 돌린다
+  const seriesOf = (subset: Trade[]) => trimSoldOut(buildDailySeries(subset, prices, today)).map(compact);
+  // 기록은 최신순이라 처음 만나는 이름이 현재 이름
+  const names = new Map<string, Trade>();
+  for (const t of trades) if (!names.has(t.symbol)) names.set(t.symbol, t);
+  const byStock: SeriesGroup[] = [...names.values()].map((t) => ({
+    key: t.symbol,
+    label: t.name,
+    sub: `${MARKET_LABEL[t.market]} · ${t.symbol.replace(/\.(KS|KQ)$/, "")}`,
+    href: `/stocks/${encodeURIComponent(t.symbol)}`,
+    points: seriesOf(trades.filter((x) => x.symbol === t.symbol)),
+  }));
+  let byAccount: SeriesGroup[] = [];
+  if (!accountId) {
+    const accounts = await prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
+    byAccount = accounts
+      .map((a) => ({ key: a.id, label: a.name, href: `/performance?account=${a.id}`, points: seriesOf(trades.filter((t) => t.accountId === a.id)) }))
+      .filter((g) => g.points.length > 0);
+  }
+  return { daily, benchmark, benchmarkMissing, byStock, byAccount };
 }
+
+/** 화면으로 보내는 크기를 줄이려고 금액은 원 단위, 수익률은 소수 8자리로 */
+const compact = (p: DailyPoint): DailyPoint => ({
+  date: p.date,
+  value: Math.round(p.value),
+  flow: Math.round(p.flow),
+  ret: Math.round(p.ret * 1e8) / 1e8,
+});

@@ -9,6 +9,7 @@ const SERIES = [
   { key: "mine", label: "내 투자", color: "var(--series-1)", width: 2.5 },
   { key: "kospi", label: "코스피", color: "var(--series-2)", width: 1.75 },
   { key: "sp500", label: "S&P 500", color: "var(--series-3)", width: 1.75 },
+  { key: "nasdaq100", label: "나스닥 100", color: "var(--series-4)", width: 1.75 },
 ] as const;
 
 /** 같은 기간 내 수익률(입출금 제외)과 시장 지수 비교. 선택한 기간의 시작을 0%로 맞춘다 */
@@ -48,7 +49,7 @@ export function BenchmarkChart({
           {failed
             ? "수익률을 불러오지 못했어요. 잠시 후 새로고침해 주세요."
             : points.length === 0
-              ? "매매 기록이 생기면 코스피·S&P 500과 비교해 보여 드려요."
+              ? "매매 기록이 생기면 코스피·S&P 500·나스닥 100과 비교해 보여 드려요."
               : "비교하려면 이틀 이상의 기록이 필요해요. 매매 기록의 거래일이 모두 같은 날이라면, 실제로 매수한 날짜로 고쳐 주세요. 그날부터 지금까지의 수익률을 시장과 비교해 드려요."}
         </p>
       </div>
