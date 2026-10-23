@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccountButton } from "@/components/account-form";
+import { CurrencyToggle } from "@/components/currency";
 import { DeleteAccountButton } from "@/components/delete-account";
 import { Holdings } from "@/components/holdings";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +14,7 @@ import { requireUserId } from "@/lib/session";
 export default async function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const { accounts, trades, positions, summary } = await loadPortfolio(userId, id);
+  const { accounts, trades, positions, summary, fx } = await loadPortfolio(userId, id);
   const account = accounts.find((a) => a.id === id);
   if (!account) notFound();
 
@@ -29,14 +30,14 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       </div>
       <div className="space-y-5">
         <SummaryCards summary={summary} />
+        <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} />
         <section>
-          <h2 className="mb-2 font-semibold">보유 종목</h2>
-          <Holdings positions={positions} totalValue={summary.valueKrw} />
-        </section>
-        <section>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="font-semibold">매매 기록</h2>
-            <Link href={`/performance?account=${account.id}`} className="text-sm text-brand">이 계좌 수익률 보기 →</Link>
+            <div className="flex items-center gap-3">
+              <Link href={`/performance?account=${account.id}`} className="whitespace-nowrap text-sm text-brand">수익률 보기 →</Link>
+              {trades.some((t) => t.market === "US") && <CurrencyToggle />}
+            </div>
           </div>
           <TradeList trades={trades} accounts={accounts} showAccount={false} />
         </section>

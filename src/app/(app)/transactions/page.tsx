@@ -1,4 +1,5 @@
 import { AccountFilter } from "@/components/account-filter";
+import { CurrencyToggle } from "@/components/currency";
 import { PageHeader } from "@/components/page-header";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
@@ -18,6 +19,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   return (
     <>
       <PageHeader title="매매기록" sub={`총 ${trades.length}건`}>
+        {trades.some((t) => t.market === "US") && <CurrencyToggle />}
         <AccountFilter accounts={accounts} value={account} />
         <AddTradeButton accounts={accounts} defaultAccountId={account} label="추가" />
       </PageHeader>

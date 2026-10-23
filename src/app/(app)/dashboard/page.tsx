@@ -36,7 +36,7 @@ export default async function DashboardPage() {
       </PageHeader>
       <div className="space-y-4">
         <SummaryCards summary={summary} />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4">
           <AssetChart points={cumulative(perf.daily)} />
           <AllocationChart
             groups={[
@@ -46,10 +46,7 @@ export default async function DashboardPage() {
             ]}
           />
         </div>
-        <section>
-          <h2 className="mb-2 font-semibold">보유 종목</h2>
-          <Holdings positions={merged} totalValue={summary.valueKrw} />
-        </section>
+        <Holdings positions={merged} totalValue={summary.valueKrw} usdKrw={fx.rate} />
       </div>
     </>
   );

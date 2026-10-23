@@ -141,3 +141,23 @@ describe("mergeBySymbol", () => {
     expect(m.returnRate).toBe(1);
   });
 });
+
+describe("displayFigures", () => {
+  it("해외 종목은 원화/달러로 전환해 보여 준다", async () => {
+    const { displayFigures } = await import("../portfolio");
+    const [p] = computePositions([trade({ symbol: "AAPL", market: "US", quantity: 2, price: 100, fxRate: 1300 })]);
+    const v = valuePosition(p, { price: 110 }, 1400);
+    const usd = displayFigures(v, "USD", 1400);
+    expect(usd).toMatchObject({ currency: "USD", price: 110, avgCost: 100, value: 220, pnl: 20 });
+    expect(usd.returnRate).toBeCloseTo(0.1);
+    const krw = displayFigures(v, "KRW", 1400);
+    expect(krw).toMatchObject({ currency: "KRW", price: 154000, avgCost: 130000, value: 308000, pnl: 48000 });
+  });
+
+  it("국내 종목은 달러 모드에서도 원화로 보여 준다", async () => {
+    const { displayFigures } = await import("../portfolio");
+    const [p] = computePositions([trade({ quantity: 10, price: 70000 })]);
+    const d = displayFigures(valuePosition(p, { price: 77000 }, 1400), "USD", 1400);
+    expect(d).toMatchObject({ currency: "KRW", price: 77000, avgCost: 70000, value: 770000, pnl: 70000 });
+  });
+});

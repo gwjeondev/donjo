@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { LogoutIcon } from "@/components/icons";
 import { BottomNav, SideNav } from "@/components/nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CurrencyProvider } from "@/components/currency";
 import { redirect } from "next/navigation";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
         </div>
       </aside>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-x-clip">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-bg/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur md:hidden">
           <div className="flex items-center gap-2">
             <img src="/icons/icon-192.png" alt="" className="size-7 rounded-lg" />
@@ -40,7 +41,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </form>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
+          <CurrencyProvider>{children}</CurrencyProvider>
+        </main>
       </div>
       <BottomNav />
     </div>

@@ -89,26 +89,69 @@ body {
   color: var(--text);
   font-feature-settings: "tnum";
   -webkit-tap-highlight-color: transparent;
+  /* 한글이 글자 단위로 끊겨 "27,399원"이 "27,399 / 원"처럼 쪼개지지 않게 단어 단위로만 줄바꿈 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-.card {
-  @apply rounded-2xl border border-line bg-surface;
+/* 공용 컴포넌트 스타일: components 레이어에 두어 개별 유틸리티(w-auto 등)로 덮어쓸 수 있게 한다 */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-base outline-none sm:text-sm focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-ink-2;
+  }
+  .btn {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 bg-brand text-white hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 border border-line bg-surface text-ink hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 text-up hover:bg-up/10;
+  }
 }
-.input {
-  @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-base outline-none sm:text-sm focus:border-brand focus:ring-2 focus:ring-brand/20;
+
+/* 화면 전환: 탭 방향에 따라 옆에서 밀려 들어온다 */
+@keyframes page-in-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
 }
-.label {
-  @apply mb-1 block text-xs font-medium text-ink-2;
+@keyframes page-in-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: none; }
 }
-.btn {
-  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50;
+@keyframes page-in-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.btn-primary {
-  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 bg-brand text-white hover:opacity-90;
+.page-from-right { animation: page-in-right 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.page-from-left { animation: page-in-left 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.page-fade { animation: page-in-fade 0.25s ease-out backwards; }
+
+/* 테마 변경: 이전 화면이 서서히 사라지며 새 테마가 나타난다 (View Transitions) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.5s;
+  animation-timing-function: ease-in-out;
 }
-.btn-ghost {
-  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 border border-line bg-surface text-ink hover:bg-surface-2;
+/* View Transitions 미지원 브라우저용: 색만 부드럽게 바꾼다 */
+html.theme-fading,
+html.theme-fading * {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, fill 0.5s ease, stroke 0.5s ease !important;
 }
-.btn-danger {
-  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 text-up hover:bg-up/10;
+
+@media (prefers-reduced-motion: reduce) {
+  .page-from-right,
+  .page-from-left,
+  .page-fade { animation: none; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
 }

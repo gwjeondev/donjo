@@ -216,3 +216,43 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
   }
   return [...map.values()];
 }
+
+export type DisplayCurrency = "KRW" | "USD";
+
+export interface DisplayFigures {
+  currency: "KRW" | "USD";
+  price: number | null;
+  avgCost: number;
+  value: number;
+  pnl: number;
+  returnRate: number;
+}
+
+/**
+ * 종목별 표시용 금액. 해외 종목은 원화/달러 중 선택한 통화로, 국내 종목은 항상 원화로 보여 준다.
+ * 원화: 현재가·평가금액은 현재 환율, 평균단가·매입금액은 매수 시점 환율 기준 (환차손익 포함)
+ * 달러: 환율 영향을 뺀 현지 통화 기준
+ */
+export function displayFigures(p: ValuedPosition, mode: DisplayCurrency, usdKrw: number): DisplayFigures {
+  if (p.currency === "USD" && mode === "USD") {
+    const value = p.price != null ? p.quantity * p.price : p.costBasis;
+    const pnl = value - p.costBasis;
+    return {
+      currency: "USD",
+      price: p.price,
+      avgCost: p.avgCost,
+      value,
+      pnl,
+      returnRate: p.costBasis > 0 ? pnl / p.costBasis : 0,
+    };
+  }
+  const fx = p.currency === "USD" ? usdKrw : 1;
+  return {
+    currency: "KRW",
+    price: p.price != null ? p.price * fx : null,
+    avgCost: p.quantity > 0 ? p.costBasisKrw / p.quantity : 0,
+    value: p.valueKrw,
+    pnl: p.unrealizedPnlKrw,
+    returnRate: p.returnRate,
+  };
+}

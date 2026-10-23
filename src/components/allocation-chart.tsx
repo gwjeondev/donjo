@@ -65,14 +65,23 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number) => [`${fmtKrw(v)} (${fmtPct(v / total, false)})`]}
-                  contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, color: "var(--text)" }}
-                  itemStyle={{ color: "var(--text)" }}
+                  content={({ active, payload }) => {
+                    const d = active && (payload?.[0]?.payload as Slice | undefined);
+                    if (!d) return null;
+                    return (
+                      <div className="max-w-56 rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-sm">
+                        <div className="font-medium text-ink">{d.label}</div>
+                        <div className="mt-0.5 whitespace-nowrap text-ink-2">
+                          {fmtKrw(d.value)} · {fmtPct(d.value / total, false)}
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="space-y-1.5 text-sm">
+          <ul className="space-y-1.5 text-sm lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-1.5 lg:space-y-0">
             {data.map((d, i) => (
               <li key={d.key} className="flex items-center gap-2">
                 <span className="size-2.5 shrink-0 rounded-sm" style={{ background: color(d.key === "__other" ? SLOTS : i) }} />

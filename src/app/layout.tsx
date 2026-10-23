@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: "계좌별 주식 매매 기록과 수익률을 관리하는 투자 관리 앱",
   applicationName: "돈조",
   appleWebApp: { capable: true, title: "돈조", statusBarStyle: "default" },
-  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

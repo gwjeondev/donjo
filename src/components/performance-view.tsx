@@ -86,8 +86,8 @@ export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) 
           </div>
 
           <div className="card overflow-hidden">
-            <table className="hidden w-full text-sm md:table">
-              <thead className="whitespace-nowrap border-b border-line bg-surface-2 text-xs text-ink-2">
+            <table className="hidden w-full whitespace-nowrap text-sm xl:table">
+              <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
                 <tr>
                   <th className="px-4 py-2.5 text-left font-medium">기간</th>
                   <th className="px-4 py-2.5 text-right font-medium">기초 평가금액</th>
@@ -115,7 +115,7 @@ export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) 
               </tbody>
             </table>
 
-            <ul className="divide-y divide-line md:hidden">
+            <ul className="divide-y divide-line xl:hidden">
               {[...data].reverse().map((r) => (
                 <li key={r.period} className="px-4 py-3">
                   <div className="flex items-baseline justify-between gap-3">
