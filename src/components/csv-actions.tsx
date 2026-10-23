@@ -7,18 +7,18 @@ import { useFormAction } from "@/lib/hooks/use-form-action";
 import { DownloadIcon, UploadIcon } from "./icons";
 import { Dialog } from "./trade-form";
 
-/** 매매 기록 CSV 내보내기 (모바일에서는 아이콘만) */
-export function ExportButton({ accountId }: { accountId?: string }) {
+/** 매매 기록 CSV 내보내기 (compact면 모바일에서 아이콘만: 좁은 머리글용) */
+export function ExportButton({ accountId, compact = true }: { accountId?: string; compact?: boolean }) {
   return (
     <a
       href={`/api/export${accountId ? `?account=${accountId}` : ""}`}
-      className="btn-ghost px-2.5 sm:px-3.5"
+      className={compact ? "btn-ghost px-2.5 sm:px-3.5" : "btn-ghost"}
       title="CSV로 내보내기"
       aria-label="CSV로 내보내기"
       download
     >
       <DownloadIcon className="size-4" />
-      <span className="hidden sm:inline">내보내기</span>
+      <span className={compact ? "hidden sm:inline" : ""}>{compact ? "내보내기" : "CSV로 내보내기"}</span>
     </a>
   );
 }

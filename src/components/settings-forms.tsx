@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { changePassword, updateProfile } from "@/app/actions";
 import { useFormAction } from "@/lib/hooks/use-form-action";
+import { PasswordRules } from "./password-rules";
 
 function Status({ state }: { state: { error?: string; message?: string } }) {
   if (state.error) return <p className="text-sm text-up">{state.error}</p>;
@@ -11,6 +12,7 @@ function Status({ state }: { state: { error?: string; message?: string } }) {
 }
 
 export function ProfileForm({ name, email }: { name: string; email: string }) {
+  // 저장 후 사이드바 이름도 바뀐다 (useFormAction이 성공 시 화면을 새로 그림)
   const { state, pending, onSubmit } = useFormAction(updateProfile);
   return (
     <form method="post" onSubmit={onSubmit} className="space-y-4">
@@ -36,9 +38,13 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
 
 export function PasswordForm() {
   const ref = useRef<HTMLFormElement>(null);
+  const [next, setNext] = useState("");
   const { state, pending, onSubmit } = useFormAction(async (prev, form) => {
     const res = await changePassword(prev, form);
-    if (res.ok) ref.current?.reset();
+    if (res.ok) {
+      ref.current?.reset();
+      setNext("");
+    }
     return res;
   });
   return (
@@ -52,7 +58,7 @@ export function PasswordForm() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="next">
-            새 비밀번호 (8자 이상)
+            새 비밀번호
           </label>
           <input
             id="next"
@@ -62,7 +68,10 @@ export function PasswordForm() {
             required
             minLength={8}
             autoComplete="new-password"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
           />
+          <PasswordRules value={next} />
         </div>
         <div>
           <label className="label" htmlFor="confirm">

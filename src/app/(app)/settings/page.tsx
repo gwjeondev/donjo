@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ExportButton } from "@/components/csv-actions";
 import { LocalizeNamesButton } from "@/components/localize-names";
 import { PageHeader } from "@/components/page-header";
@@ -49,18 +48,14 @@ export default async function SettingsPage() {
           title="데이터 백업"
           desc="모든 매매 기록을 CSV 파일로 받습니다. 매매기록 화면의 '가져오기'로 다시 불러올 수 있어요."
         >
-          <ExportButton />
+          <ExportButton compact={false} />
         </Section>
-        <form action={logout}>
+        {/* 로그아웃: PC는 사이드바에 있어 모바일에서만 보인다 */}
+        <form action={logout} className="md:hidden">
           <button className="btn-ghost w-full sm:w-auto">
             <LogoutIcon className="size-4" /> 로그아웃
           </button>
         </form>
-        <p className="pt-2 text-center text-sm">
-          <Link href="/about" className="text-ink-2 hover:text-brand">
-            돈조 소개
-          </Link>
-        </p>
       </div>
     </>
   );

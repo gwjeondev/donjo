@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { deleteTransaction } from "@/app/actions";
 import { fmtPrice, fmtQty, MARKET_LABEL } from "@/lib/format";
@@ -15,6 +16,7 @@ interface AccountOption {
 
 function DeleteButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
+  const router = useRouter();
   return (
     <button
       className="rounded-md p-1.5 text-muted hover:bg-up/10 hover:text-up disabled:opacity-40"
@@ -25,6 +27,7 @@ function DeleteButton({ id }: { id: string }) {
         start(async () => {
           const res = await deleteTransaction(id);
           if (res.error) alert(res.error);
+          else router.refresh();
         });
       }}
     >

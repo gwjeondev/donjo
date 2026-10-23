@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { localizeAllStockNames } from "@/app/actions";
 
 /** 모든 국내 종목 이름을 증권사 표기 이름으로 (직접 바꾼 이름도 덮어씀) */
 export function LocalizeNamesButton() {
   const [pending, start] = useTransition();
+  const router = useRouter();
   const [message, setMessage] = useState("");
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -15,7 +17,10 @@ export function LocalizeNamesButton() {
         disabled={pending}
         onClick={() => {
           if (!confirm("직접 바꾼 이름을 포함해 모든 국내 종목 이름을 증권사 표기 이름으로 바꿀까요?")) return;
-          start(async () => setMessage((await localizeAllStockNames()).message ?? ""));
+          start(async () => {
+            setMessage((await localizeAllStockNames()).message ?? "");
+            router.refresh();
+          });
         }}
       >
         {pending ? "바꾸는 중…" : "국내 종목 이름을 공식 이름으로"}

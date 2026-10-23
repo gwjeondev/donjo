@@ -134,7 +134,13 @@ export default async function AboutPage() {
         </ul>
       </section>
 
-      <footer className="mt-16 border-t border-line pt-6 text-center text-xs text-muted">
+      <footer className="mt-16 space-y-1 border-t border-line pt-6 text-center text-xs text-muted">
+        <p>
+          문의{" "}
+          <a href="mailto:gw4609@gmail.com" className="font-medium text-ink-2 hover:text-brand">
+            gw4609@gmail.com
+          </a>
+        </p>
         <p>© 돈조</p>
       </footer>
     </main>

@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { fromCsv } from "@/lib/csv";
+import { passwordProblem } from "@/lib/password";
 import { loadTrades, toTrade } from "@/lib/data";
 import { getKoreanNames, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
 import { FX_SYMBOL } from "@/lib/performance";
@@ -14,6 +15,9 @@ import { computePositions, findOversell, sortTrades } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/session";
 
+// 저장 액션은 데이터만 바꾸고 화면은 새로 그리지 않는다(revalidatePath 없음).
+// 액션 응답에 화면 다시 그리기가 섞이면 응답이 중간에 끊겨 "처리 중"에서 멈추는 경우가 있어,
+// 화면 갱신은 클라이언트가 응답을 받은 뒤 router.refresh()로 따로 한다 (useFormAction 참고).
 export interface FormState {
   error?: string;
   ok?: boolean;
@@ -27,7 +31,10 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const registerSchema = z.object({
   name: z.string().max(50).optional(),
   email: z.email("올바른 이메일을 입력하세요"),
-  password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
+  password: z.string().superRefine((p, ctx) => {
+    const problem = passwordProblem(p);
+    if (problem) ctx.addIssue({ code: "custom", message: problem });
+  }),
 });
 
 export async function register(_: FormState, form: FormData): Promise<FormState> {
@@ -91,7 +98,6 @@ export async function saveAccount(_: FormState, form: FormData): Promise<FormSta
   } else {
     await prisma.account.create({ data: { ...parsed.data, userId } });
   }
-  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -188,7 +194,6 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
     });
     await prisma.transaction.create({ data: { ...record, name: named?.name ?? data.name } });
   }
-  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -203,7 +208,6 @@ export async function deleteTransaction(id: string): Promise<FormState> {
     return { error: "이 매수 기록을 지우면 이후 매도 수량이 보유 수량을 넘습니다. 매도 기록을 먼저 삭제하세요." };
   }
   await prisma.transaction.delete({ where: { id } });
-  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -214,7 +218,6 @@ export async function refreshQuotes() {
   const userId = await requireUserId();
   const held = computePositions(await loadTrades(userId)).filter((p) => p.quantity > 0);
   await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL], 60 * 1000);
-  revalidatePath("/", "layout");
 }
 
 // ---------- CSV 가져오기 ----------
@@ -308,7 +311,6 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       })),
     });
   });
-  revalidatePath("/", "layout");
   const parts = [`${incoming.length}건 추가`];
   if (skipped) parts.push(`중복 ${skipped}건 건너뜀`);
   if (newAccounts.length) parts.push(`새 계좌 ${newAccounts.join(", ")}`);
@@ -329,7 +331,10 @@ export async function updateProfile(_: FormState, form: FormData): Promise<FormS
 const passwordSchema = z
   .object({
     current: z.string().min(1, "현재 비밀번호를 입력하세요"),
-    next: z.string().min(8, "새 비밀번호는 8자 이상이어야 합니다"),
+    next: z.string().superRefine((p, ctx) => {
+      const problem = passwordProblem(p);
+      if (problem) ctx.addIssue({ code: "custom", message: problem.replace("비밀번호는", "새 비밀번호는") });
+    }),
     confirm: z.string(),
   })
   .refine((v) => v.next === v.confirm, { message: "새 비밀번호가 서로 다릅니다" });
@@ -357,7 +362,6 @@ export async function renameStock(_: FormState, form: FormData): Promise<FormSta
   if (name.length > 100) return { error: "종목명은 100자 이하로 입력하세요" };
   const res = await prisma.transaction.updateMany({ where: { account: { userId }, symbol }, data: { name } });
   if (res.count === 0) return { error: "종목을 찾을 수 없습니다" };
-  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -365,6 +369,5 @@ export async function renameStock(_: FormState, form: FormData): Promise<FormSta
 export async function localizeAllStockNames(): Promise<FormState> {
   const userId = await requireUserId();
   const changed = await localizeStockNames(userId, { all: true });
-  revalidatePath("/", "layout");
   return { ok: true, message: changed ? `${changed}개 종목 이름을 바꿨습니다` : "바꿀 종목이 없습니다" };
 }
