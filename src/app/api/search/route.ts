@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
   if (kr.status === "rejected") console.warn("[search] 네이버 검색 실패:", (kr.reason as Error)?.message);
   if (results.length === 0 && kr.status === "rejected" && global.status === "rejected") {
-    return NextResponse.json({ results: [], error: "검색 서비스에 연결하지 못했습니다" }, { status: 502 });
+    return NextResponse.json({ results: [], error: "검색 서비스에 연결하지 못했어요" }, { status: 502 });
   }
   return NextResponse.json({ results });
 }

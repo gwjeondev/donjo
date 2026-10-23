@@ -57,7 +57,7 @@ export function AssetChart({ points, failed = false }: { points: Point[]; failed
       </div>
       {data.length < 2 ? (
         <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted">
-          {failed ? "자산 추이를 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없습니다"}
+          {failed ? "자산 추이를 불러오지 못했어요. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없어요"}
         </p>
       ) : (
         <div className="h-60 min-h-60 xl:h-auto xl:flex-1" /* 옆 카드(자산 비중)가 더 길면 그 높이만큼 늘어난다 */>

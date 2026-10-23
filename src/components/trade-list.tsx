@@ -66,7 +66,7 @@ export function TradeList({
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const { currency } = useDisplayCurrency();
   if (trades.length === 0) {
-    return <p className="card p-8 text-center text-sm text-muted">매매 기록이 없습니다.</p>;
+    return <p className="card p-8 text-center text-sm text-muted">매매 기록이 없어요.</p>;
   }
   return (
     <div className="card overflow-hidden">

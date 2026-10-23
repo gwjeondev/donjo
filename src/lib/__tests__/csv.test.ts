@@ -24,10 +24,10 @@ describe("csv", () => {
     const { rows, errors } = fromCsv(csv);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ tradeDate: "2026-10-01", quantity: 1000, fxRate: 1 });
-    expect(errors).toEqual(["3번째 줄: 거래일 형식이 올바르지 않습니다 (YYYY-MM-DD)", "4번째 줄: 구분은 매수/매도여야 합니다"]);
+    expect(errors).toEqual(["3번째 줄: 거래일 형식이 올바르지 않아요 (YYYY-MM-DD)", "4번째 줄: 구분은 매수/매도여야 해요"]);
   });
 
   it("필수 열이 없으면 거부한다", () => {
-    expect(fromCsv("계좌,거래일\n일반,2026-01-01").errors[0]).toContain("필수 열이 없습니다");
+    expect(fromCsv("계좌,거래일\n일반,2026-01-01").errors[0]).toContain("필수 열이 없어요");
   });
 });

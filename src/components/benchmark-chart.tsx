@@ -52,7 +52,7 @@ export function BenchmarkChart({
         <h2 className="font-semibold">시장 대비 수익률</h2>
         <p className="mt-3 text-sm text-ink-2">
           {failed
-            ? "수익률을 불러오지 못했습니다. 잠시 후 새로고침해 주세요."
+            ? "수익률을 불러오지 못했어요. 잠시 후 새로고침해 주세요."
             : points.length === 0
               ? "매매 기록이 생기면 코스피·S&P 500과 비교해 보여 드려요."
               : "비교하려면 이틀 이상의 기록이 필요해요. 매매 기록의 거래일이 모두 같은 날이라면, 실제로 매수한 날짜로 고쳐 주세요. 그날부터 지금까지의 수익률을 시장과 비교해 드려요."}

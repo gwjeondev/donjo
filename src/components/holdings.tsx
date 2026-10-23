@@ -46,7 +46,7 @@ export function Holdings({
         {hasUs && <CurrencyToggle />}
       </div>
       {held.length === 0 ? (
-        <p className="card p-8 text-center text-sm text-muted">보유 중인 종목이 없습니다. 매수 기록을 추가해 보세요.</p>
+        <p className="card p-8 text-center text-sm text-muted">보유 중인 종목이 없어요. 매수 기록을 추가해 보세요.</p>
       ) : (
         <div className="card overflow-hidden">
           {/* PC(lg 이상): 표. 숫자 칸은 폭을 고정해 원화/달러 전환 시 칸이 움직이지 않게 하고, 종목명이 남는 폭을 쓰며 넘치면 말줄임 */}

@@ -45,7 +45,7 @@ export async function register(_: FormState, form: FormData): Promise<FormState>
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { email, password, name } = parsed.data;
-  if (await prisma.user.findUnique({ where: { email } })) return { error: "이미 가입된 이메일입니다" };
+  if (await prisma.user.findUnique({ where: { email } })) return { error: "이미 가입된 이메일이에요" };
   await prisma.user.create({
     data: {
       email,
@@ -66,7 +66,7 @@ export async function login(_: FormState, form: FormData): Promise<FormState> {
     });
     return { ok: true };
   } catch (e) {
-    if (e instanceof AuthError) return { error: "이메일 또는 비밀번호가 올바르지 않습니다" };
+    if (e instanceof AuthError) return { error: "이메일 또는 비밀번호가 올바르지 않아요" };
     throw e;
   }
 }
@@ -94,7 +94,7 @@ export async function saveAccount(_: FormState, form: FormData): Promise<FormSta
   const id = str(form, "id");
   if (id) {
     const res = await prisma.account.updateMany({ where: { id, userId }, data: parsed.data });
-    if (res.count === 0) return { error: "계좌를 찾을 수 없습니다" };
+    if (res.count === 0) return { error: "계좌를 찾을 수 없어요" };
   } else {
     await prisma.account.create({ data: { ...parsed.data, userId } });
   }
@@ -118,11 +118,11 @@ const txSchema = z.object({
   name: z.string().min(1, "종목명을 입력하세요").max(100),
   market: z.enum(["KOSPI", "KOSDAQ", "US"]),
   type: z.enum(["BUY", "SELL"]),
-  quantity: num("수량을 입력하세요").positive("수량은 0보다 커야 합니다"),
-  price: num("단가를 입력하세요").positive("단가는 0보다 커야 합니다"),
-  fee: num("수수료가 올바르지 않습니다").min(0).default(0),
-  tax: num("세금이 올바르지 않습니다").min(0).default(0),
-  fxRate: num("환율이 올바르지 않습니다").positive("환율을 입력하세요"),
+  quantity: num("수량을 입력하세요").positive("수량은 0보다 커야 해요"),
+  price: num("단가를 입력하세요").positive("단가는 0보다 커야 해요"),
+  fee: num("수수료가 올바르지 않아요").min(0).default(0),
+  tax: num("세금이 올바르지 않아요").min(0).default(0),
+  fxRate: num("환율이 올바르지 않아요").positive("환율을 입력하세요"),
   tradeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "거래일을 입력하세요"),
   memo: z.string().max(200).optional(),
 });
@@ -156,11 +156,11 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
   const data = { ...parsed.data, symbol: normalizeSymbol(parsed.data.symbol, parsed.data.market) };
 
   const account = await prisma.account.findFirst({ where: { id: data.accountId, userId } });
-  if (!account) return { error: "계좌를 찾을 수 없습니다" };
+  if (!account) return { error: "계좌를 찾을 수 없어요" };
 
   const id = str(form, "id");
   if (id && !(await prisma.transaction.findFirst({ where: { id, account: { userId } } }))) {
-    return { error: "거래 기록을 찾을 수 없습니다" };
+    return { error: "거래 기록을 찾을 수 없어요" };
   }
 
   // 저장 후에도 모든 매도가 보유 수량 이내인지 확인
@@ -174,7 +174,7 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
     createdAt: new Date().toISOString(),
   };
   if (findOversell([...existing.map(toTrade), candidate])) {
-    return { error: "매도 수량이 해당 시점의 보유 수량보다 많습니다" };
+    return { error: "매도 수량이 해당 시점의 보유 수량보다 많아요" };
   }
 
   const record = { ...data, tradeDate: new Date(`${data.tradeDate}T00:00:00Z`) };
@@ -200,12 +200,12 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
 export async function deleteTransaction(id: string): Promise<FormState> {
   const userId = await requireUserId();
   const tx = await prisma.transaction.findFirst({ where: { id, account: { userId } } });
-  if (!tx) return { error: "거래 기록을 찾을 수 없습니다" };
+  if (!tx) return { error: "거래 기록을 찾을 수 없어요" };
   const rest = await prisma.transaction.findMany({
     where: { accountId: tx.accountId, symbol: tx.symbol, NOT: { id } },
   });
   if (findOversell(rest.map(toTrade))) {
-    return { error: "이 매수 기록을 지우면 이후 매도 수량이 보유 수량을 넘습니다. 매도 기록을 먼저 삭제하세요." };
+    return { error: "이 매수 기록을 지우면 이후 매도 수량이 보유 수량을 넘어요. 매도 기록을 먼저 삭제해 주세요." };
   }
   await prisma.transaction.delete({ where: { id } });
   return { ok: true };
@@ -232,13 +232,13 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   const userId = await requireUserId();
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "CSV 파일을 선택하세요" };
-  if (file.size > MAX_IMPORT_BYTES) return { error: "파일이 너무 큽니다 (최대 2MB)" };
+  if (file.size > MAX_IMPORT_BYTES) return { error: "파일이 너무 커요 (최대 2MB)" };
 
   const { rows, errors } = fromCsv(await file.text());
   if (errors.length) {
     return { error: errors.slice(0, 5).join("\n") + (errors.length > 5 ? `\n외 ${errors.length - 5}건` : "") };
   }
-  if (rows.length === 0) return { error: "가져올 기록이 없습니다" };
+  if (rows.length === 0) return { error: "가져올 기록이 없어요" };
 
   const accounts = await prisma.account.findMany({ where: { userId } });
   const accountId = new Map(accounts.map((a) => [a.name, a.id]));
@@ -281,11 +281,11 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       return true;
     });
   const skipped = rows.length - incoming.length;
-  if (incoming.length === 0) return { ok: true, message: `새로 추가할 기록이 없습니다 (중복 ${skipped}건 건너뜀)` };
+  if (incoming.length === 0) return { ok: true, message: `새로 추가할 기록이 없어요 (중복 ${skipped}건 건너뜀)` };
 
   const oversell = findOversell([...existing, ...incoming]);
   if (oversell) {
-    return { error: `${oversell.tradeDate} ${oversell.name} 매도 수량이 그 시점 보유 수량보다 많습니다` };
+    return { error: `${oversell.tradeDate} ${oversell.name} 매도 수량이 그 시점 보유 수량보다 많아요` };
   }
 
   await prisma.$transaction(async (tx) => {
@@ -325,7 +325,7 @@ export async function updateProfile(_: FormState, form: FormData): Promise<FormS
   if (name.length > 50) return { error: "이름은 50자 이하로 입력하세요" };
   // 이름은 다른 화면에 표시되지 않으므로 화면 전체를 다시 그리지 않는다
   await prisma.user.update({ where: { id: userId }, data: { name: name || null } });
-  return { ok: true, message: "저장했습니다" };
+  return { ok: true, message: "저장했어요" };
 }
 
 const passwordSchema = z
@@ -337,7 +337,7 @@ const passwordSchema = z
     }),
     confirm: z.string(),
   })
-  .refine((v) => v.next === v.confirm, { message: "새 비밀번호가 서로 다릅니다" });
+  .refine((v) => v.next === v.confirm, { message: "새 비밀번호가 서로 달라요" });
 
 export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
   const userId = await requireUserId();
@@ -345,10 +345,10 @@ export async function changePassword(_: FormState, form: FormData): Promise<Form
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !(await bcrypt.compare(parsed.data.current, user.passwordHash))) {
-    return { error: "현재 비밀번호가 올바르지 않습니다" };
+    return { error: "현재 비밀번호가 올바르지 않아요" };
   }
   await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(parsed.data.next, 10) } });
-  return { ok: true, message: "비밀번호를 변경했습니다" };
+  return { ok: true, message: "비밀번호를 변경했어요" };
 }
 
 // ---------- 종목명 변경 ----------
@@ -361,7 +361,7 @@ export async function renameStock(_: FormState, form: FormData): Promise<FormSta
   if (!name) return { error: "종목명을 입력하세요" };
   if (name.length > 100) return { error: "종목명은 100자 이하로 입력하세요" };
   const res = await prisma.transaction.updateMany({ where: { account: { userId }, symbol }, data: { name } });
-  if (res.count === 0) return { error: "종목을 찾을 수 없습니다" };
+  if (res.count === 0) return { error: "종목을 찾을 수 없어요" };
   return { ok: true };
 }
 
@@ -369,5 +369,5 @@ export async function renameStock(_: FormState, form: FormData): Promise<FormSta
 export async function localizeAllStockNames(): Promise<FormState> {
   const userId = await requireUserId();
   const changed = await localizeStockNames(userId, { all: true });
-  return { ok: true, message: changed ? `${changed}개 종목 이름을 바꿨습니다` : "바꿀 종목이 없습니다" };
+  return { ok: true, message: changed ? `${changed}개 종목 이름을 바꿨어요` : "바꿀 종목이 없어요" };
 }

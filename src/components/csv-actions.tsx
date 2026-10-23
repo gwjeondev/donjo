@@ -35,14 +35,14 @@ function ImportForm({ onDone }: { onDone: () => void }) {
     <form method="post" onSubmit={onSubmit} className="space-y-4">
       <div className="rounded-lg bg-surface-2 p-3 text-xs leading-relaxed text-ink-2">
         <p>
-          <b>내보내기</b>로 받은 파일과 같은 형식의 CSV를 올려 주세요. 첫 줄은 열 이름입니다.
+          <b>내보내기</b>로 받은 파일과 같은 형식의 CSV를 올려 주세요. 첫 줄은 열 이름이에요.
         </p>
         <p className="mt-1 break-all font-mono text-[11px] text-muted">{CSV_COLUMNS.join(", ")}</p>
         <ul className="mt-2 list-disc space-y-0.5 pl-4">
           <li>구분: 매수/매도 · 시장: 코스피/코스닥/미국 · 거래일: YYYY-MM-DD</li>
-          <li>수수료·세금·환율·메모는 비워도 됩니다 (미국 주식은 환율 필요)</li>
-          <li>없는 계좌는 새로 만들고, 이미 있는 기록은 건너뜁니다</li>
-          <li>한 줄이라도 잘못되면 아무것도 저장하지 않습니다</li>
+          <li>수수료·세금·환율·메모는 비워도 돼요 (미국 주식은 환율 필요)</li>
+          <li>없는 계좌는 새로 만들고, 이미 있는 기록은 건너뛰어요</li>
+          <li>한 줄이라도 잘못되면 아무것도 저장하지 않아요</li>
         </ul>
       </div>
       <input

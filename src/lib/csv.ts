@@ -83,10 +83,10 @@ const num = (v: string) => Number(v.replace(/[,\s원$]/g, "") || "0");
 export function fromCsv(text: string): { rows: CsvTrade[]; errors: string[] } {
   const [header, ...body] = parseCsv(text);
   const errors: string[] = [];
-  if (!header) return { rows: [], errors: ["빈 파일입니다"] };
+  if (!header) return { rows: [], errors: ["빈 파일이에요"] };
   const idx = Object.fromEntries(CSV_COLUMNS.map((c) => [c, header.findIndex((h) => h.trim() === c)]));
   const missing = CSV_COLUMNS.filter((c) => idx[c] < 0 && !["수수료", "세금", "환율", "메모"].includes(c));
-  if (missing.length) return { rows: [], errors: [`필수 열이 없습니다: ${missing.join(", ")}`] };
+  if (missing.length) return { rows: [], errors: [`필수 열이 없어요: ${missing.join(", ")}`] };
 
   const rows: CsvTrade[] = [];
   body.forEach((cells, i) => {
@@ -110,14 +110,14 @@ export function fromCsv(text: string): { rows: CsvTrade[]; errors: string[] } {
       memo: get("메모"),
     };
     const problem =
-      !r.account ? "계좌가 비어 있습니다" :
-      !/^\d{4}-\d{2}-\d{2}$/.test(r.tradeDate) ? "거래일 형식이 올바르지 않습니다 (YYYY-MM-DD)" :
-      !type ? "구분은 매수/매도여야 합니다" :
-      !market ? "시장은 코스피/코스닥/미국이어야 합니다" :
-      !r.symbol || !r.name ? "종목코드와 종목명이 필요합니다" :
-      !(r.quantity > 0) || !(r.price > 0) ? "수량과 단가는 0보다 커야 합니다" :
-      !(r.fee >= 0) || !(r.tax >= 0) ? "수수료·세금이 올바르지 않습니다" :
-      market === "US" && !(r.fxRate > 0) ? "미국 주식은 환율이 필요합니다" :
+      !r.account ? "계좌가 비어 있어요" :
+      !/^\d{4}-\d{2}-\d{2}$/.test(r.tradeDate) ? "거래일 형식이 올바르지 않아요 (YYYY-MM-DD)" :
+      !type ? "구분은 매수/매도여야 해요" :
+      !market ? "시장은 코스피/코스닥/미국이어야 해요" :
+      !r.symbol || !r.name ? "종목코드와 종목명이 필요해요" :
+      !(r.quantity > 0) || !(r.price > 0) ? "수량과 단가는 0보다 커야 해요" :
+      !(r.fee >= 0) || !(r.tax >= 0) ? "수수료·세금이 올바르지 않아요" :
+      market === "US" && !(r.fxRate > 0) ? "미국 주식은 환율이 필요해요" :
       null;
     if (problem) errors.push(`${line}번째 줄: ${problem}`);
     else rows.push(r as CsvTrade);

@@ -36,7 +36,7 @@ export function PerformanceView({ rows, failed = false }: { rows: Record<TabId, 
 
       {data.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">
-          {failed ? "수익률을 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "매매 기록이 생기면 수익률이 표시됩니다."}
+          {failed ? "수익률을 불러오지 못했어요. 잠시 후 새로고침해 주세요." : "매매 기록이 생기면 수익률을 보여 드려요."}
         </p>
       ) : (
         <>
@@ -142,7 +142,7 @@ export function PerformanceView({ rows, failed = false }: { rows: Record<TabId, 
           </div>
           <p className="text-xs leading-relaxed text-muted">
             <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
-            <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률입니다. 손익 = 기말 − 기초 − 순투입.
+            <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 손익 = 기말 − 기초 − 순투입.
           </p>
         </>
       )}

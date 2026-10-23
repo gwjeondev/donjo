@@ -70,7 +70,7 @@ export function StockPriceChart({
   currency: "KRW" | "USD";
 }) {
   if (points.length < 2) {
-    return <p className="card p-8 text-center text-sm text-muted">가격 기록이 아직 충분하지 않습니다</p>;
+    return <p className="card p-8 text-center text-sm text-muted">가격 기록이 아직 충분하지 않아요</p>;
   }
   const short = (v: number) => (currency === "USD" ? `$${v.toFixed(0)}` : `${(v / 1000).toFixed(0)}천`);
   return (

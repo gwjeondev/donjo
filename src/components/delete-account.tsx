@@ -12,7 +12,7 @@ export function DeleteAccountButton({ id, name }: { id: string; name: string }) 
       className="btn-danger"
       disabled={pending}
       onClick={() => {
-        if (confirm(`"${name}" 계좌와 모든 매매 기록을 삭제할까요? 되돌릴 수 없습니다.`)) start(() => deleteAccount(id));
+        if (confirm(`"${name}" 계좌와 모든 매매 기록을 삭제할까요? 되돌릴 수 없어요.`)) start(() => deleteAccount(id));
       }}
     >
       <TrashIcon className="size-4" /> 계좌 삭제

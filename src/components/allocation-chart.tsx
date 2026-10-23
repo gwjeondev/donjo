@@ -44,7 +44,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
         </div>
       </div>
       {total === 0 ? (
-        <p className="py-12 text-center text-sm text-muted">데이터가 없습니다</p>
+        <p className="py-12 text-center text-sm text-muted">데이터가 없어요</p>
       ) : (
         <div className="grid grid-cols-1 items-center gap-4 @md:grid-cols-[180px_minmax(0,1fr)]">
           <div className="mx-auto h-44 w-44">

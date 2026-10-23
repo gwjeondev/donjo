@@ -74,7 +74,7 @@ function TradeForm({
       if (!res.ok || typeof j.price !== "number") throw new Error();
       setAmounts((a) => ({ ...a, price: String(j.price) }));
     } catch {
-      setPriceError("현재가를 가져오지 못했습니다");
+      setPriceError("현재가를 가져오지 못했어요");
     } finally {
       setPriceLoading(false);
     }
@@ -174,7 +174,7 @@ function TradeForm({
             !symbol.trim()
               ? "종목을 검색해서 선택하세요"
               : !market
-                ? "시장을 확인할 수 없습니다. 코스피/코스닥을 선택하세요"
+                ? "시장을 확인할 수 없어요. 코스피/코스닥을 선택해 주세요"
                 : "종목명을 입력하세요",
           );
           return;

@@ -34,20 +34,20 @@ export default async function SettingsPage() {
         <Section title="비밀번호 변경">
           <PasswordForm />
         </Section>
-        <Section title="화면 테마" desc="이 기기에만 적용됩니다.">
+        <Section title="화면 테마" desc="이 기기에만 적용돼요.">
           <div className="max-w-xs">
             <ThemeToggle full />
           </div>
         </Section>
         <Section
           title="종목 이름"
-          desc="국내 종목은 증권사(네이버 증권) 표기 이름으로 자동으로 바뀌어요. 직접 바꾼 한글 이름은 유지되며, 아래 버튼을 누르면 그것까지 모두 공식 이름으로 맞춥니다."
+          desc="국내 종목은 증권사(네이버 증권) 표기 이름으로 자동으로 바뀌어요. 직접 바꾼 한글 이름은 유지되며, 아래 버튼을 누르면 그것까지 모두 공식 이름으로 맞춰요."
         >
           <LocalizeNamesButton />
         </Section>
         <Section
           title="데이터 백업"
-          desc="모든 매매 기록을 CSV 파일로 받습니다. 매매기록 화면의 '가져오기'로 다시 불러올 수 있어요."
+          desc="모든 매매 기록을 CSV 파일로 받아요. 매매기록 화면의 '가져오기'로 다시 불러올 수 있어요."
         >
           <ExportButton compact={false} />
         </Section>

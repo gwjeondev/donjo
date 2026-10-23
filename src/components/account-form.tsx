@@ -38,7 +38,7 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
       <button className="btn-primary w-full" disabled={pending}>{pending ? "저장 중…" : "저장"}</button>
       {initial && (
         <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
-          <p className="text-xs text-muted">계좌를 지우면 모든 매매 기록도 함께 삭제됩니다.</p>
+          <p className="text-xs text-muted">계좌를 지우면 모든 매매 기록도 함께 삭제돼요.</p>
           <DeleteAccountButton id={initial.id} name={initial.name} />
         </div>
       )}
