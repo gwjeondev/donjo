@@ -1,5 +1,5 @@
 // 홈 화면 설치(PWA)용 최소 서비스워커: 정적 자원만 캐시하고, 페이지는 항상 네트워크 우선.
-const CACHE = "donjo-v2";
+const CACHE = "donjo-v3";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {

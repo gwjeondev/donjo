@@ -1,65 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#26355f"/>
-      <stop offset="1" stop-color="#101934"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.62" r="0.5">
-      <stop offset="0" stop-color="#ffcf4a" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#ffcf4a" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff0a8"/>
-      <stop offset="0.45" stop-color="#f7c331"/>
-      <stop offset="1" stop-color="#c47f06"/>
-    </linearGradient>
-    <linearGradient id="goldIn" x1="1" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#ffe27a"/>
-      <stop offset="1" stop-color="#d9930d"/>
-    </linearGradient>
-    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="0.5" stop-color="#c9d1db"/>
-      <stop offset="1" stop-color="#7f8a99"/>
-    </linearGradient>
-    <linearGradient id="gemTop" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#b5f0ff"/>
-      <stop offset="1" stop-color="#3fa9f5"/>
-    </linearGradient>
-    <linearGradient id="gemBot" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3a8ef0"/>
-      <stop offset="1" stop-color="#1c3fa8"/>
-    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2b55"/><stop offset="1" stop-color="#0b1230"/></linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff2ad"/><stop offset="1" stop-color="#f3b62a"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d6970f"/><stop offset="1" stop-color="#9a6106"/></linearGradient>
+    <linearGradient id="arrow" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2fe39a"/><stop offset="1" stop-color="#a8ffd8"/></linearGradient>
   </defs>
   <rect id="plate" width="512" height="512" rx="116" fill="url(#bg)"/>
-  <circle cx="256" cy="320" r="230" fill="url(#glow)"/>
-
-  <!-- 은화 (뒤) -->
+  <!-- 동전 탑 3개 (점점 높게) -->
   <g>
-    <circle cx="340" cy="318" r="104" fill="#5d6776"/>
-    <circle cx="334" cy="310" r="104" fill="url(#silver)"/>
-    <circle cx="334" cy="310" r="80" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="9"/>
+    <rect x="72" y="342" width="104" height="80" fill="url(#edge)"/>
+    <ellipse cx="124" cy="422" rx="52" ry="16" fill="#9a6106"/>
+    <path d="M72 366 H176 M72 390 H176" stroke="#7a4a00" stroke-opacity="0.5" stroke-width="4"/>
+    <ellipse cx="124" cy="342" rx="52" ry="16" fill="url(#face)"/>
   </g>
-
-  <!-- 금화 (앞) -->
   <g>
-    <circle cx="214" cy="344" r="124" fill="#9a5f00"/>
-    <circle cx="206" cy="334" r="124" fill="url(#gold)"/>
-    <circle cx="206" cy="334" r="96" fill="url(#goldIn)"/>
-    <circle cx="206" cy="334" r="96" fill="none" stroke="#fff4c2" stroke-opacity="0.8" stroke-width="8"/>
-    <!-- 동전 가운데 반짝임(별) -->
-    <path d="M206 276 L220 320 L264 334 L220 348 L206 392 L192 348 L148 334 L192 320 Z" fill="#fff8d6" fill-opacity="0.95"/>
+    <rect x="204" y="270" width="104" height="152" fill="url(#edge)"/>
+    <ellipse cx="256" cy="422" rx="52" ry="16" fill="#9a6106"/>
+    <path d="M204 294 H308 M204 318 H308 M204 342 H308 M204 366 H308 M204 390 H308" stroke="#7a4a00" stroke-opacity="0.5" stroke-width="4"/>
+    <ellipse cx="256" cy="270" rx="52" ry="16" fill="url(#face)"/>
   </g>
-
-  <!-- 보석 -->
-  <g transform="translate(300 56)">
-    <path d="M30 60 L62 20 L130 20 L162 60 Z" fill="url(#gemTop)"/>
-    <path d="M30 60 L162 60 L96 162 Z" fill="url(#gemBot)"/>
-    <path d="M62 20 L80 60 L96 20 M130 20 L112 60 L96 20 M80 60 L96 162 L112 60" fill="none" stroke="#e6fbff" stroke-opacity="0.75" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M30 60 L62 20 L130 20 L162 60 L96 162 Z" fill="none" stroke="#e6fbff" stroke-width="6" stroke-linejoin="round"/>
+  <g>
+    <rect x="336" y="198" width="104" height="224" fill="url(#edge)"/>
+    <ellipse cx="388" cy="422" rx="52" ry="16" fill="#9a6106"/>
+    <path d="M336 222 H440 M336 246 H440 M336 270 H440 M336 294 H440 M336 318 H440 M336 342 H440 M336 366 H440 M336 390 H440" stroke="#7a4a00" stroke-opacity="0.5" stroke-width="4"/>
+    <ellipse cx="388" cy="198" rx="52" ry="16" fill="url(#face)"/>
   </g>
-
-  <!-- 반짝임 -->
-  <path d="M120 96 L128 122 L154 130 L128 138 L120 164 L112 138 L86 130 L112 122 Z" fill="#fff6c8"/>
-  <path d="M438 236 L443 252 L459 257 L443 262 L438 278 L433 262 L417 257 L433 252 Z" fill="#ffffff" fill-opacity="0.9"/>
+  <!-- 상승 화살표 -->
+  <path d="M84 280 L210 186 L284 222 L404 112" stroke="url(#arrow)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M352 104 L420 92 L410 160 Z" fill="#a8ffd8"/>
 </svg>
