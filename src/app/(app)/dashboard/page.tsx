@@ -4,6 +4,7 @@ import { FxNote } from "@/components/fx-note";
 import { Holdings } from "@/components/holdings";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
+import { Welcome } from "@/components/welcome";
 import { AddTradeButton } from "@/components/trade-form";
 import { loadPerformance, loadPortfolio } from "@/lib/data";
 import { MARKET_LABEL } from "@/lib/format";
@@ -15,7 +16,7 @@ export const metadata = { title: "대시보드" };
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
-  const [{ accounts, positions, summary, fx, quotedAt }, perf] = await Promise.all([
+  const [{ accounts, trades, positions, summary, fx, quotedAt }, perf] = await Promise.all([
     loadPortfolio(userId),
     loadPerformance(userId),
   ]);
@@ -34,20 +35,42 @@ export default async function DashboardPage() {
       <PageHeader title="전체 자산" sub={<FxNote fx={fx} quotedAt={quotedAt} />}>
         <AddTradeButton accounts={accounts} />
       </PageHeader>
-      <div className="space-y-4">
-        <SummaryCards summary={summary} />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <AssetChart points={cumulative(perf.daily)} failed={perf.failed} />
-          <AllocationChart
-            groups={[
-              { id: "stock", label: "종목", slices: merged.map((p) => ({ key: p.symbol, label: p.name, value: p.valueKrw })) },
-              { id: "market", label: "시장", slices: sumBy((p) => p.market, (k) => MARKET_LABEL[k as keyof typeof MARKET_LABEL]) },
-              { id: "account", label: "계좌", slices: sumBy((p) => p.accountId, (k) => accountName.get(k) ?? "") },
-            ]}
-          />
+      {trades.length === 0 ? (
+        <Welcome accounts={accounts} />
+      ) : (
+        <div className="space-y-4">
+          <SummaryCards summary={summary} />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <AssetChart points={cumulative(perf.daily)} failed={perf.failed} />
+            <AllocationChart
+              groups={[
+                {
+                  id: "stock",
+                  label: "종목",
+                  slices: merged.map((p) => ({ key: p.symbol, label: p.name, value: p.valueKrw })),
+                },
+                {
+                  id: "market",
+                  label: "시장",
+                  slices: sumBy(
+                    (p) => p.market,
+                    (k) => MARKET_LABEL[k as keyof typeof MARKET_LABEL],
+                  ),
+                },
+                {
+                  id: "account",
+                  label: "계좌",
+                  slices: sumBy(
+                    (p) => p.accountId,
+                    (k) => accountName.get(k) ?? "",
+                  ),
+                },
+              ]}
+            />
+          </div>
+          <Holdings positions={merged} totalValue={summary.valueKrw} usdKrw={fx.rate} />
         </div>
-        <Holdings positions={merged} totalValue={summary.valueKrw} usdKrw={fx.rate} />
-      </div>
+      )}
     </>
   );
 }

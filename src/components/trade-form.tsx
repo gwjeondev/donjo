@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormAction } from "@/lib/hooks/use-form-action";
 import { saveTransaction } from "@/app/actions";
-import { MARKET_LABEL } from "@/lib/format";
+import { fmtPrice, MARKET_LABEL } from "@/lib/format";
 import type { Market, Trade } from "@/lib/portfolio";
 import { CloseIcon, EditIcon, PlusIcon } from "./icons";
 
@@ -46,6 +46,31 @@ function TradeForm({
   const [date, setDate] = useState(initial?.tradeDate ?? today());
   const [fxRate, setFxRate] = useState(initial && initial.market === "US" ? String(initial.fxRate) : "");
   const fxTouched = useRef(!!initial);
+  const [amounts, setAmounts] = useState({
+    quantity: initial ? String(initial.quantity) : "",
+    price: initial ? String(initial.price) : "",
+    fee: initial?.fee ? String(initial.fee) : "",
+    tax: initial?.tax ? String(initial.tax) : "",
+  });
+  const setAmount = (k: keyof typeof amounts) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setAmounts((a) => ({ ...a, [k]: e.target.value }));
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState("");
+
+  const fillCurrentPrice = async () => {
+    setPriceLoading(true);
+    setPriceError("");
+    try {
+      const res = await fetch(`/api/quote?symbol=${encodeURIComponent(symbol)}&market=${market}`);
+      const j = await res.json();
+      if (!res.ok || typeof j.price !== "number") throw new Error();
+      setAmounts((a) => ({ ...a, price: String(j.price) }));
+    } catch {
+      setPriceError("현재가를 가져오지 못했습니다");
+    } finally {
+      setPriceLoading(false);
+    }
+  };
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -190,11 +215,22 @@ function TradeForm({
         </div>
         <div>
           <label className="label" htmlFor="quantity">수량 (주)</label>
-          <input id="quantity" name="quantity" inputMode="decimal" className="input text-right" required defaultValue={initial?.quantity} />
+          <input id="quantity" name="quantity" inputMode="decimal" className="input text-right" required value={amounts.quantity} onChange={setAmount("quantity")} />
         </div>
         <div>
-          <label className="label" htmlFor="price">단가 ({currency})</label>
-          <input id="price" name="price" inputMode="decimal" className="input text-right" required defaultValue={initial?.price} />
+          <div className="flex items-center justify-between">
+            <label className="label" htmlFor="price">단가 ({currency})</label>
+            <button
+              type="button"
+              onClick={fillCurrentPrice}
+              disabled={!symbol.trim() || priceLoading}
+              className="mb-1 text-xs font-medium text-brand disabled:text-muted"
+            >
+              {priceLoading ? "조회 중…" : "현재가"}
+            </button>
+          </div>
+          <input id="price" name="price" inputMode="decimal" className="input text-right" required value={amounts.price} onChange={setAmount("price")} />
+          {priceError && <p className="mt-1 text-xs text-up">{priceError}</p>}
         </div>
         {market === "US" ? (
           <div>
@@ -217,11 +253,11 @@ function TradeForm({
         )}
         <div>
           <label className="label" htmlFor="fee">수수료 ({currency})</label>
-          <input id="fee" name="fee" inputMode="decimal" className="input text-right" defaultValue={initial?.fee || ""} placeholder="0" />
+          <input id="fee" name="fee" inputMode="decimal" className="input text-right" value={amounts.fee} onChange={setAmount("fee")} placeholder="0" />
         </div>
         <div>
           <label className="label" htmlFor="tax">세금 ({currency})</label>
-          <input id="tax" name="tax" inputMode="decimal" className="input text-right" defaultValue={initial?.tax || ""} placeholder="0" />
+          <input id="tax" name="tax" inputMode="decimal" className="input text-right" value={amounts.tax} onChange={setAmount("tax")} placeholder="0" />
         </div>
       </div>
 
@@ -229,6 +265,8 @@ function TradeForm({
         <label className="label" htmlFor="memo">메모</label>
         <input id="memo" name="memo" className="input" defaultValue={initial?.memo ?? ""} placeholder="매매 이유 등" />
       </div>
+
+      <TradeTotal type={type} market={market} fxRate={fxRate} {...amounts} />
 
       {state.error && <p className="text-sm text-up">{state.error}</p>}
       <button className="btn-primary w-full py-2.5" disabled={pending || accounts.length === 0}>
@@ -239,6 +277,27 @@ function TradeForm({
 }
 
 /** 입력 중 실수로 닫히지 않도록 X 버튼으로만 닫는다 (바깥 클릭·Esc 무시) */
+const toNum = (v: string) => Number(v.replaceAll(",", "")) || 0;
+
+/** 입력 중인 거래의 총액 미리보기 (매수: 금액+비용, 매도: 금액-비용 = 받을 돈) */
+function TradeTotal(props: { type: "BUY" | "SELL"; market: Market; fxRate: string; quantity: string; price: string; fee: string; tax: string }) {
+  const gross = toNum(props.quantity) * toNum(props.price);
+  if (!gross) return null;
+  const cost = toNum(props.fee) + toNum(props.tax);
+  const net = props.type === "BUY" ? gross + cost : gross - cost;
+  const currency = props.market === "US" ? "USD" : "KRW";
+  const fx = toNum(props.fxRate);
+  return (
+    <div className="flex items-baseline justify-between gap-3 rounded-lg bg-surface-2 px-3 py-2.5 text-sm">
+      <span className="text-ink-2">{props.type === "BUY" ? "총 매수금액" : "받을 금액"}</span>
+      <span className="text-right">
+        <span className="font-semibold">{fmtPrice(net, currency)}</span>
+        {currency === "USD" && fx > 0 && <span className="ml-1.5 text-xs text-muted">≈ {fmtPrice(net * fx, "KRW")}</span>}
+      </span>
+    </div>
+  );
+}
+
 const DIALOG_EXIT_MS = 250;
 
 /** 입력 중 실수로 닫히지 않도록 X 버튼으로만 닫는다 (바깥 클릭·Esc 무시). 닫힐 때는 퇴장 애니메이션 후 제거 */

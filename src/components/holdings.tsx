@@ -5,6 +5,20 @@ import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 
+/** 오늘 등락률 (전일 종가 대비) */
+function DayChange({ p, prefix = "", inline = false }: { p: ValuedPosition; prefix?: string; inline?: boolean }) {
+  if (p.price == null || !p.previousClose) return null;
+  const r = p.price / p.previousClose - 1;
+  const Tag = inline ? "span" : "div";
+  return (
+    <Tag className={inline ? "" : "text-xs"}>
+      {prefix}
+      <span className="text-muted">오늘 </span>
+      <span className={tone(r)}>{fmtPct(r)}</span>
+    </Tag>
+  );
+}
+
 const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
 const signed = (n: number, c: "KRW" | "USD") => `${n > 0 ? "+" : n < 0 ? "-" : ""}${fmtPrice(Math.abs(n), c)}`;
 
@@ -68,7 +82,10 @@ export function Holdings({
                     </div>
                     <div className="text-xs text-muted">{fmtPrice(d.avgCost, d.currency)}</div>
                   </td>
-                  <td className="px-3 py-3 text-right font-medium">{fmtPrice(d.value, d.currency)}</td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="font-medium">{fmtPrice(d.value, d.currency)}</div>
+                    <DayChange p={p} />
+                  </td>
                   <td className={`px-3 py-3 text-right ${tone(d.pnl)}`}>
                     <div>{signed(d.pnl, d.currency)}</div>
                     <div className="text-xs">{fmtPct(d.returnRate)}</div>
@@ -93,6 +110,7 @@ export function Holdings({
                     <div className="truncate font-medium">{p.name}</div>
                     <div className="truncate text-xs text-muted">
                       {fmtQty(p.quantity)}주 · 평단 {fmtPrice(d.avgCost, d.currency)}
+                      <DayChange p={p} prefix=" · " inline />
                     </div>
                   </div>
                   <div className="shrink-0 whitespace-nowrap text-right">
