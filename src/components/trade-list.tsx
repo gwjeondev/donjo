@@ -135,12 +135,12 @@ export function TradeList({
                     {fmtPrice(f.amount, f.currency)}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted">
-                  <span className="truncate">
-                    {t.tradeDate}
-                    {showAccount && ` · ${accountName.get(t.accountId)}`}
-                  </span>
-                  <span className="shrink-0 whitespace-nowrap">
+                {/* 날짜·계좌·수량×단가를 한 줄에. 좁으면 잘라내지 않고 단어 단위로 줄바꿈 */}
+                <div className="mt-1 text-xs text-muted" data-wrap="ok">
+                  <span className="whitespace-nowrap">{t.tradeDate}</span>
+                  {showAccount && <> · {accountName.get(t.accountId)}</>}
+                  {" · "}
+                  <span className="whitespace-nowrap">
                     {fmtQty(t.quantity)}주 × {fmtPrice(f.price, f.currency)}
                   </span>
                 </div>

@@ -31,8 +31,8 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
         <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} />
         <section>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="font-semibold">매매 기록</h2>
-            <div className="flex items-center gap-3">
+            <h2 className="shrink-0 whitespace-nowrap font-semibold">매매 기록</h2>
+            <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
               <Link href={`/performance?account=${account.id}`} className="whitespace-nowrap text-sm text-brand">수익률 보기 →</Link>
               {trades.some((t) => t.market === "US") && <CurrencyToggle />}
             </div>

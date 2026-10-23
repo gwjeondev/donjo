@@ -4,6 +4,7 @@ import Link from "next/link";
 import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
+import { PositionRow } from "./position-row";
 
 /** 오늘 등락률 (전일 종가 대비) */
 function DayChange({ p, prefix = "", inline = false }: { p: ValuedPosition; prefix?: string; inline?: boolean }) {
@@ -102,23 +103,21 @@ export function Holdings({
           <ul className="divide-y divide-line lg:hidden">
             {rows.map(({ p, d }) => (
               <li key={`${p.accountId}-${p.symbol}`}>
-                <Link
-                  href={stockHref(p.symbol)}
-                  className="flex items-center justify-between gap-3 px-4 py-3 active:bg-surface-2"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{p.name}</div>
-                    <div className="truncate text-xs text-muted">
-                      {fmtQty(p.quantity)}주 · 평단 {fmtPrice(d.avgCost, d.currency)}
-                      <DayChange p={p} prefix=" · " inline />
-                    </div>
-                  </div>
-                  <div className="shrink-0 whitespace-nowrap text-right">
-                    <div className="font-medium">{fmtPrice(d.value, d.currency)}</div>
-                    <div className={`text-xs ${tone(d.pnl)}`}>
-                      {signed(d.pnl, d.currency)} ({fmtPct(d.returnRate)})
-                    </div>
-                  </div>
+                <Link href={stockHref(p.symbol)} className="block px-4 py-3 active:bg-surface-2">
+                  <PositionRow
+                    title={p.name}
+                    info={
+                      <>
+                        <span className="whitespace-nowrap">{fmtQty(p.quantity)}주</span> ·{" "}
+                        <span className="whitespace-nowrap">평단 {fmtPrice(d.avgCost, d.currency)}</span>
+                      </>
+                    }
+                    extra={<DayChange p={p} inline />}
+                    value={fmtPrice(d.value, d.currency)}
+                    pnl={signed(d.pnl, d.currency)}
+                    rate={fmtPct(d.returnRate)}
+                    toneClass={tone(d.pnl)}
+                  />
                 </Link>
               </li>
             ))}

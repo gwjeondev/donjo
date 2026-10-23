@@ -85,7 +85,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
             {data.map((d, i) => (
               <li key={d.key} className="flex items-center gap-2">
                 <span className="size-2.5 shrink-0 rounded-sm" style={{ background: color(d.key === "__other" ? SLOTS : i) }} />
-                <span className="min-w-0 flex-1 truncate text-ink-2">{d.label}</span>
+                <span className="min-w-0 flex-1 truncate text-ink-2" title={d.label}>{d.label}</span>
                 <span className="font-medium">{fmtPct(d.value / total, false)}</span>
               </li>
             ))}

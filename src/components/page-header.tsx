@@ -18,7 +18,9 @@ export function PageHeader({
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="min-w-0 truncate text-xl font-bold md:text-2xl">{title}</h1>
+        <h1 className="min-w-0 truncate text-xl font-bold md:text-2xl" title={title}>
+          {title}
+        </h1>
         {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
       </div>
       {sub && <p className="mt-1 text-sm text-ink-2">{sub}</p>}
