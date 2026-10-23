@@ -281,6 +281,9 @@ function TradeForm({
               ))}
             </ul>
           )}
+          <p className="mt-1.5 text-xs text-muted">
+            해외 주식은 한글 이름(예: 애플)이나 영문 티커(예: AAPL)로 검색해요. 안 나오면 영문 티커로 검색해 주세요.
+          </p>
           <button type="button" onClick={() => setManual(true)} className="mt-1.5 text-xs font-medium text-brand">
             검색되지 않나요? 직접 입력
           </button>

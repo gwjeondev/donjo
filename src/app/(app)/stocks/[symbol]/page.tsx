@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { RenameStockButton } from "@/components/rename-stock";
 import { AccountBreakdown, StockPriceChart, StockSummary, type PricePoint } from "@/components/stock-detail";
@@ -20,7 +20,8 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
   const userId = await requireUserId();
   const { accounts, trades: allTrades, positions: allPositions, fx } = await loadPortfolio(userId);
   const trades = allTrades.filter((t) => t.symbol === symbol);
-  if (trades.length === 0) notFound();
+  // 기록이 없는 종목(예: 이 화면에서 마지막 매매 기록을 지운 경우)은 대시보드로 돌아간다
+  if (trades.length === 0) redirect("/dashboard");
 
   // 전량 매도한 종목도 현재가를 보여 주도록 시세를 따로 조회한다
   const quote = (await getQuotes([symbol])).get(symbol);

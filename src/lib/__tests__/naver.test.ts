@@ -9,7 +9,7 @@ describe("naver parsing", () => {
         { code: "381180", name: "TIGER 미국필라델피아반도체나스닥", typeCode: "KOSPI", typeName: "코스피", nationCode: "KOR", category: "stock" },
         { code: "247540", name: "에코프로비엠", typeCode: "KOSDAQ", typeName: "코스닥", nationCode: "KOR", category: "stock" },
         { code: "0193T0", name: "TIME 글로벌AI인공지능액티브", typeName: "코스피", nationCode: "KOR" },
-        { code: "SOXX", name: "iShares Semiconductor ETF", typeCode: "NASDAQ", nationCode: "USA", category: "stock" },
+        { code: "KOSPI", name: "코스피", category: "index", nationCode: "KOR" },
         { code: "KOSPI", name: "코스피", category: "index" },
       ],
     };
@@ -17,6 +17,23 @@ describe("naver parsing", () => {
       { symbol: "381180.KS", name: "TIGER 미국필라델피아반도체나스닥", market: "KOSPI", exchange: "KOSPI" },
       { symbol: "247540.KQ", name: "에코프로비엠", market: "KOSDAQ", exchange: "KOSDAQ" },
       { symbol: "0193T0.KS", name: "TIME 글로벌AI인공지능액티브", market: "KOSPI", exchange: "KOSPI" },
+    ]);
+  });
+
+  it("미국 종목은 한글 이름으로 찾고 Yahoo 티커로 바꾼다", () => {
+    const json = {
+      items: [
+        { code: "GOOGL", name: "알파벳 A", typeCode: "NASDAQ", typeName: "나스닥", nationCode: "USA", reutersCode: "GOOGL.O", category: "stock" },
+        { code: "BRK.B", name: "버크셔 해서웨이 B", typeCode: "NYSE", nationCode: "USA", reutersCode: "BRK.B", category: "stock" },
+        { name: "애플", typeName: "나스닥", reutersCode: "AAPL.O" },
+        { code: "005930", name: "삼성전자", typeCode: "KOSPI", nationCode: "KOR", category: "stock" },
+      ],
+    };
+    expect(parseSearch(json)).toEqual([
+      { symbol: "GOOGL", name: "알파벳 A", market: "US", exchange: "NASDAQ" },
+      { symbol: "BRK-B", name: "버크셔 해서웨이 B", market: "US", exchange: "NYSE" },
+      { symbol: "AAPL", name: "애플", market: "US", exchange: "US" },
+      { symbol: "005930.KS", name: "삼성전자", market: "KOSPI", exchange: "KOSPI" },
     ]);
   });
 

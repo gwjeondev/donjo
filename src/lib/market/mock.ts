@@ -62,9 +62,10 @@ export const mockProvider: MarketDataProvider = {
   },
   async search(query) {
     const q = query.toLowerCase();
-    return SAMPLES.filter((s) => s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q)).map(
-      (s) => ({ ...s, exchange: s.market }),
-    );
+    return SAMPLES.filter((s) => s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q)).map((s) => ({
+      ...s,
+      exchange: s.market,
+    }));
   },
 };
 
@@ -78,15 +79,30 @@ const KR_NAMES: Record<string, string> = {
   "456600": "TIME 글로벌AI인공지능액티브",
 };
 
+// 개발/테스트용 미국 종목 한글 이름 (네이버 대신)
+const US_KO_NAMES: Record<string, string> = {
+  AAPL: "애플",
+  GOOGL: "알파벳 A",
+  NVDA: "엔비디아",
+  TSLA: "테슬라",
+  "BRK-B": "버크셔 해서웨이 B",
+};
+
 export const mockKoreanSource: KoreanStockSource = {
   async search(query) {
     const q = query.toLowerCase();
-    return Object.entries(KR_NAMES)
-      .filter(([code, name]) => name.toLowerCase().includes(q) || code.includes(q))
-      .map(([code, name]) => {
-        const market = SAMPLES.find((s) => s.symbol.startsWith(code))?.market ?? "KOSPI";
-        return { symbol: `${code}.${market === "KOSDAQ" ? "KQ" : "KS"}`, name, market, exchange: market };
-      });
+    const us = Object.entries(US_KO_NAMES)
+      .filter(([ticker, name]) => name.includes(query) || ticker.toLowerCase() === q)
+      .map(([ticker, name]) => ({ symbol: ticker, name, market: "US" as const, exchange: "US" }));
+    return [
+      ...us,
+      ...Object.entries(KR_NAMES)
+        .filter(([code, name]) => name.toLowerCase().includes(q) || code.includes(q))
+        .map(([code, name]) => {
+          const market = SAMPLES.find((s) => s.symbol.startsWith(code))?.market ?? "KOSPI";
+          return { symbol: `${code}.${market === "KOSDAQ" ? "KQ" : "KS"}`, name, market, exchange: market };
+        }),
+    ];
   },
   async lookup(code) {
     const name = KR_NAMES[code];
