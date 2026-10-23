@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseName, parseSearch } from "../market/naver";
+import { parseBasic, parseName, parseSearch } from "../market/naver";
 
 describe("naver parsing", () => {
   it("자동완성에서 국내 주식·ETF만 골라 시장을 판별한다", () => {
@@ -30,5 +30,12 @@ describe("naver parsing", () => {
     expect(parseName({ itemCode: "005930", stockName: "삼성전자", stockNameEng: "Samsung Elec" })).toBe("삼성전자");
     expect(parseName({ stockItem: { stockName: "NAVER" } })).toBe("NAVER");
     expect(parseName({})).toBeNull();
+  });
+
+  it("기본정보에서 시장을 판별한다", () => {
+    expect(parseBasic({ stockName: "에코프로비엠", stockExchangeType: { code: "KQ", nameKor: "코스닥" } })).toEqual({ name: "에코프로비엠", market: "KOSDAQ" });
+    expect(parseBasic({ stockName: "삼성전자", stockExchangeType: { code: "KS", nameKor: "코스피" } })).toEqual({ name: "삼성전자", market: "KOSPI" });
+    expect(parseBasic({ stockName: "알수없음" })).toEqual({ name: "알수없음", market: null });
+    expect(parseBasic({})).toBeNull();
   });
 });

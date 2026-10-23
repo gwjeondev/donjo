@@ -88,7 +88,9 @@ export const mockKoreanSource: KoreanStockSource = {
         return { symbol: `${code}.${market === "KOSDAQ" ? "KQ" : "KS"}`, name, market, exchange: market };
       });
   },
-  async name(code) {
-    return KR_NAMES[code] ?? null;
+  async lookup(code) {
+    const name = KR_NAMES[code];
+    if (!name) return null;
+    return { name, market: SAMPLES.find((s) => s.symbol.startsWith(code))?.market ?? "KOSPI" };
   },
 };

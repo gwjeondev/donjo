@@ -164,7 +164,7 @@ export async function getKoreanNames(symbols: string[]): Promise<Map<string, str
       stale.slice(i, i + REFRESH_CONCURRENCY).map(async (symbol) => {
         let name: string | null = null;
         try {
-          name = await koreanSource.name(symbol.slice(0, -3));
+          name = (await koreanSource.lookup(symbol.slice(0, -3)))?.name ?? null;
         } catch (e) {
           console.warn(`[market] 한글 이름 조회 실패 ${symbol}:`, (e as Error).message);
         }

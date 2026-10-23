@@ -12,7 +12,7 @@ const HEADERS = {
 const TIMEOUT_MS = 3000;
 
 /** 국내 종목코드: 숫자 6자리 또는 신규 형식(예: 0193T0) */
-const KR_CODE = /^[0-9][0-9A-Z]{5}$/;
+export const KR_CODE = /^[0-9][0-9A-Z]{5}$/;
 
 function marketFrom(...hints: unknown[]): Market | null {
   const text = hints.filter((h) => typeof h === "string").join(" ").toUpperCase();
@@ -52,6 +52,15 @@ export function parseName(json: unknown): string | null {
   return name || null;
 }
 
+/** 종목 기본정보 응답 → 한글 이름과 시장(코스피/코스닥) */
+export function parseBasic(json: unknown): { name: string; market: Market | null } | null {
+  const name = parseName(json);
+  if (!name) return null;
+  const o = asObj(json);
+  const ex = asObj(o.stockExchangeType);
+  return { name, market: marketFrom(ex.code, ex.nameKor, ex.nameEng, o.stockExchangeName, o.marketName) };
+}
+
 async function getJson(url: string) {
   const res = await fetch(url, { headers: HEADERS, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`naver ${res.status}`);
@@ -60,8 +69,8 @@ async function getJson(url: string) {
 
 export interface KoreanStockSource {
   search(query: string): Promise<SymbolSearchResult[]>;
-  /** 종목코드(6자리)로 증권사 표기 이름 조회 */
-  name(code: string): Promise<string | null>;
+  /** 종목코드(6자리)로 증권사 표기 이름·시장 조회 */
+  lookup(code: string): Promise<{ name: string; market: Market | null } | null>;
 }
 
 export const naverSource: KoreanStockSource = {
@@ -69,8 +78,8 @@ export const naverSource: KoreanStockSource = {
     const qs = new URLSearchParams({ q: query, target: "stock" });
     return parseSearch(await getJson(`https://ac.stock.naver.com/ac?${qs}`));
   },
-  async name(code) {
+  async lookup(code) {
     if (!KR_CODE.test(code)) return null;
-    return parseName(await getJson(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/basic`));
+    return parseBasic(await getJson(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/basic`));
   },
 };
