@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
@@ -12,6 +13,11 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           <p className="mt-1 text-sm text-ink-2">계좌별 매매 기록과 수익률을 한눈에</p>
         </div>
         {children}
+        <p className="mt-6 text-center text-sm">
+          <Link href="/about" className="text-ink-2 hover:text-brand">
+            돈조가 뭔가요?
+          </Link>
+        </p>
       </div>
     </main>
   );

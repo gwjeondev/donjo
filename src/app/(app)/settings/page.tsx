@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ExportButton } from "@/components/csv-actions";
 import { LocalizeNamesButton } from "@/components/localize-names";
 import { PageHeader } from "@/components/page-header";
@@ -55,6 +56,11 @@ export default async function SettingsPage() {
             <LogoutIcon className="size-4" /> 로그아웃
           </button>
         </form>
+        <p className="pt-2 text-center text-sm">
+          <Link href="/about" className="text-ink-2 hover:text-brand">
+            돈조 소개
+          </Link>
+        </p>
       </div>
     </>
   );
