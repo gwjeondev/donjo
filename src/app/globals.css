@@ -23,6 +23,7 @@
   color-scheme: light;
 }
 
+/* 어두운 테마: 시스템 설정을 따르되, 사용자가 고른 테마(data-theme)가 우선한다 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #111110;
@@ -45,6 +46,28 @@
     --series-other: #6b6a65;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #111110;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --border: #2f2f2c;
+  --text: #f0efec;
+  --text-2: #c3c2b7;
+  --muted: #8d8c86;
+  --brand: #3987e5;
+  --up: #f06464;
+  --down: #5b9af0;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-other: #6b6a65;
+  color-scheme: dark;
 }
 
 @theme inline {
