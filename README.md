@@ -72,6 +72,10 @@ npm run build
 
 Neon 대신 Supabase 같은 외부 Postgres를 쓰려면 2번 대신 `DATABASE_URL`을 직접 넣으면 됩니다.
 
+> **Prisma Postgres를 연결한 경우:** 연동이 `DATABASE_URL`(직접 연결)과 `PRISMA_DATABASE_URL`(커넥션 풀링)을 함께 넣어 줍니다.
+> 앱은 `PRISMA_DATABASE_URL`이 있으면 그 주소로 쿼리하므로, 서버리스 환경에서 동시 접속 한도 오류(P2037)가 나지 않습니다.
+> 마이그레이션은 `DATABASE_URL`을 씁니다.
+
 ## 웹앱(PWA)으로 설치
 
 - **iPhone (Safari)**: 공유 버튼 → "홈 화면에 추가"
