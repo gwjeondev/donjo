@@ -5,7 +5,6 @@ import { Holdings } from "@/components/holdings";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
 import { Welcome } from "@/components/welcome";
-import { AddTradeButton } from "@/components/trade-form";
 import { loadPerformance, loadPortfolio } from "@/lib/data";
 import { MARKET_LABEL } from "@/lib/format";
 import { cumulative } from "@/lib/performance";
@@ -35,9 +34,8 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="전체 자산" sub={<FxNote fx={fx} quotedAt={quotedAt} />}>
-        <AddTradeButton accounts={accounts} />
-      </PageHeader>
+      {/* 대시보드는 보기 전용: 기록 추가·수정은 매매기록·계좌 화면에서 */}
+      <PageHeader title="전체 자산" sub={<FxNote fx={fx} quotedAt={quotedAt} />} />
       {trades.length === 0 ? (
         <Welcome accounts={accounts} />
       ) : (
