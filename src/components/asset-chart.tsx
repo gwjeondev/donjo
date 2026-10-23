@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtKrwShort, fmtPct, tone } from "@/lib/format";
+import { rangeBounds, sliceRange, type RangeId } from "@/lib/range";
 
 interface Point {
   date: string;
@@ -11,25 +12,20 @@ interface Point {
   cum: number;
 }
 
-const RANGES = [
-  { id: "1M", days: 31 },
-  { id: "3M", days: 92 },
-  { id: "1Y", days: 366 },
-  { id: "전체", days: Infinity },
-] as const;
+const RANGES = ["1M", "3M", "YTD", "1Y", "전체"] as const satisfies readonly RangeId[];
 
 export function AssetChart({ points, failed = false }: { points: Point[]; failed?: boolean }) {
-  const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("3M");
-  const data = useMemo(() => {
-    const days = RANGES.find((r) => r.id === range)!.days;
-    if (!points.length || days === Infinity) return points;
-    const last = new Date(points.at(-1)!.date).getTime();
-    return points.filter((p) => last - new Date(p.date).getTime() <= days * 86400000);
+  const [range, setRange] = useState<(typeof RANGES)[number]>("3M");
+  const { data, base } = useMemo(() => {
+    if (!points.length) return { data: points, base: undefined };
+    const { from } = rangeBounds(range, points.at(-1)!.date);
+    const r = sliceRange(points, from);
+    return { data: r.points, base: r.before ?? r.points[0] };
   }, [points, range]);
 
-  const first = data[0];
   const last = data.at(-1);
-  const periodReturn = first && last ? (1 + last.cum) / (1 + first.cum) - 1 : 0;
+  // 수익률 화면과 같게 기간 직전 날을 기준으로 잡는다
+  const periodReturn = base && last ? (1 + last.cum) / (1 + base.cum) - 1 : 0;
 
   return (
     <div className="card flex h-full flex-col p-5">
@@ -46,11 +42,11 @@ export function AssetChart({ points, failed = false }: { points: Point[]; failed
         <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
           {RANGES.map((r) => (
             <button
-              key={r.id}
-              onClick={() => setRange(r.id)}
-              className={`rounded-md px-2.5 py-1 font-medium ${r.id === range ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
+              key={r}
+              onClick={() => setRange(r)}
+              className={`rounded-md px-2.5 py-1 font-medium ${r === range ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
             >
-              {r.id}
+              {r}
             </button>
           ))}
         </div>

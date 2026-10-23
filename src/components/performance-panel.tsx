@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { BenchmarkChart } from "@/components/benchmark-chart";
 import { PerformanceView } from "@/components/performance-view";
-import type { BenchmarkPoint, DailyPoint, SeriesGroup } from "@/lib/performance";
+import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
 import { RANGE_IDS, rangeBounds, sliceRange, type RangeId } from "@/lib/range";
 
 const RANGE_LABEL: Record<RangeId, string> = { "1M": "1M", "3M": "3M", YTD: "YTD", "1Y": "1Y", 전체: "전체", 직접: "직접입력" };
@@ -17,12 +17,8 @@ export function PerformancePanel({
   benchmark,
   missing,
   failed,
-  byStock,
-  byAccount,
 }: {
   daily: DailyPoint[];
-  byStock: SeriesGroup[];
-  byAccount: SeriesGroup[];
   benchmark: BenchmarkPoint[];
   missing: string[];
   failed: boolean;
@@ -128,10 +124,6 @@ export function PerformancePanel({
             points={view.daily}
             startValue={view.startValue}
             limited={range === "전체"}
-            from={view.from}
-            to={view.to}
-            byStock={byStock}
-            byAccount={byAccount}
             failed={failed}
           />
         </>

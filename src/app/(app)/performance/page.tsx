@@ -12,16 +12,16 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const userId = await requireUserId();
   const [accounts, perf] = await Promise.all([
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
-    loadPerformance(userId, account, { breakdown: true }),
+    loadPerformance(userId, account),
   ]);
   return (
     <>
       <PageHeader
         title="수익률"
-        sub="기간별 · 종목별 · 계좌별 수익률"
+        sub="일별 · 월별 · 연도별 자산 증가율"
         toolbar={<AccountFilter accounts={accounts} value={account} />}
       />
-      <PerformancePanel daily={perf.daily} benchmark={perf.benchmark} missing={perf.benchmarkMissing} failed={perf.failed} byStock={perf.byStock} byAccount={perf.byAccount} />
+      <PerformancePanel daily={perf.daily} benchmark={perf.benchmark} missing={perf.benchmarkMissing} failed={perf.failed} />
     </>
   );
 }

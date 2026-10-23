@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, summarizeRange, trimSoldOut, type DailyPoint } from "../performance";
+import { aggregate, type DailyPoint } from "../performance";
 import { rangeBounds, sliceRange } from "../range";
 
 const pts: DailyPoint[] = [
@@ -36,24 +36,5 @@ describe("range", () => {
     expect(jan.pnl).toBeCloseTo(11);
     expect(jan.returnRate).toBeCloseTo(0.1);
     expect(feb.returnRate).toBeCloseTo(0.1);
-  });
-
-  it("구간 요약: 직전 평가금액에서 시작해 손익과 수익률을 낸다", () => {
-    const { points, before } = sliceRange(pts, "2026-01-01");
-    const r = summarizeRange(points, before?.value);
-    expect(r).toMatchObject({ startValue: 110, endValue: 243.1, netFlow: 100 });
-    expect(r.pnl).toBeCloseTo(33.1);
-    expect(r.returnRate).toBeCloseTo(0.21);
-  });
-
-  it("다 판 뒤의 0원 날들은 버리고, 판 날은 남긴다", () => {
-    const sold: DailyPoint[] = [
-      { date: "2026-01-01", value: 100, flow: 100, ret: 0 },
-      { date: "2026-01-02", value: 0, flow: -120, ret: 0.2 },
-      { date: "2026-01-03", value: 0, flow: 0, ret: 0 },
-      { date: "2026-01-04", value: 0, flow: 0, ret: 0 },
-    ];
-    expect(trimSoldOut(sold).map((p) => p.date)).toEqual(["2026-01-01", "2026-01-02"]);
-    expect(summarizeRange(trimSoldOut(sold)).pnl).toBe(20);
   });
 });

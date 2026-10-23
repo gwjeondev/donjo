@@ -158,42 +158,6 @@ export function aggregate(points: DailyPoint[], period: Period, startValue = 0):
   }
 }
 
-/** 종목별·계좌별 수익률용 일별 시계열 */
-export interface SeriesGroup {
-  key: string;
-  label: string;
-  sub?: string;
-  href?: string;
-  points: DailyPoint[];
-}
-
-/** 한 구간 전체를 한 줄로 요약 (종목별·계좌별 수익률용). startValue는 구간 직전 날의 평가금액 */
-export function summarizeRange(points: DailyPoint[], startValue = 0): Omit<PeriodRow, "period"> {
-  let growth = 1;
-  let netFlow = 0;
-  for (const p of points) {
-    growth *= 1 + p.ret;
-    netFlow += p.flow;
-  }
-  const endValue = points.at(-1)?.value ?? startValue;
-  return {
-    startValue,
-    endValue,
-    netFlow,
-    pnl: endValue - startValue - netFlow,
-    returnRate: growth - 1,
-    valueChangeRate: startValue > 0 ? (endValue - startValue) / startValue : 0,
-  };
-}
-
-/** 다 팔고 난 뒤의 0원짜리 날들은 버린다 (보낼 데이터를 줄이고, 그 뒤 기간에는 아예 안 보이게) */
-export function trimSoldOut(points: DailyPoint[]): DailyPoint[] {
-  let end = points.length;
-  while (end > 0 && points[end - 1].value === 0 && points[end - 1].flow === 0) end--;
-  // 다 판 날(마지막으로 유출이 있는 날)까지는 남겨야 그 기간 손익이 잡힌다
-  return points.slice(0, end);
-}
-
 /** 차트용: 날짜, 평가금액, 누적 수익률 */
 export function cumulative(points: DailyPoint[]) {
   let g = 1;
