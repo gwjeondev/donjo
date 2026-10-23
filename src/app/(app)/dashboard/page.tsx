@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
 import { Welcome } from "@/components/welcome";
 import { loadPerformance, loadPortfolio } from "@/lib/data";
-import { MARKET_LABEL } from "@/lib/format";
 import { cumulative } from "@/lib/performance";
 import { mergeBySymbol } from "@/lib/portfolio";
 import { localizeStockNames } from "@/lib/market/service";
@@ -53,9 +52,10 @@ export default async function DashboardPage() {
                 {
                   id: "market",
                   label: "시장",
+                  // 국내(코스피·코스닥)와 해외 두 묶음
                   slices: sumBy(
-                    (p) => p.market,
-                    (k) => MARKET_LABEL[k as keyof typeof MARKET_LABEL],
+                    (p) => (p.market === "US" ? "US" : "KR"),
+                    (k) => (k === "US" ? "해외" : "국내"),
                   ),
                 },
                 {

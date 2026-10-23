@@ -218,3 +218,20 @@ export async function localizeStockNames(userId: string, { all = false } = {}): 
 }
 
 export { hasHangul };
+
+/**
+ * 국내 종목코드의 거래소(코스피/코스닥)를 찾는다. 시세 조회(Yahoo .KS/.KQ)에 필요하다.
+ * 네이버 → 실패 시 Yahoo 시세가 있는 쪽으로 판별. 못 찾으면 market은 null.
+ */
+export async function detectKoreanExchange(code: string): Promise<{ market: "KOSPI" | "KOSDAQ" | null; name: string | null }> {
+  const info = await koreanSource.lookup(code).catch(() => null);
+  if (info?.market === "KOSPI" || info?.market === "KOSDAQ") return { market: info.market, name: info.name };
+  for (const [suffix, market] of [["KS", "KOSPI"], ["KQ", "KOSDAQ"]] as const) {
+    const ok = await provider.quote(`${code}.${suffix}`).then(
+      () => true,
+      () => false,
+    );
+    if (ok) return { market, name: info?.name ?? null };
+  }
+  return { market: null, name: info?.name ?? null };
+}

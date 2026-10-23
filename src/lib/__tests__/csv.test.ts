@@ -12,7 +12,23 @@ describe("csv", () => {
     expect(csv.startsWith("﻿계좌,거래일")).toBe(true);
     const { rows, errors } = fromCsv(csv);
     expect(errors).toEqual([]);
-    expect(rows).toEqual([sample[0], { ...sample[1], symbol: "005930" }]);
+    // 국내 종목은 "국내"로 나가고, 거래소는 가져올 때 다시 찾는다
+    expect(csv).toContain(",해외,SNDK,");
+    expect(csv).toContain(",국내,005930,");
+    expect(rows).toEqual([sample[0], { ...sample[1], market: "KR", symbol: "005930" }]);
+  });
+
+  it("시장 칸은 국내/해외·코스피/코스닥/미국을 받고, 비우면 종목코드로 판단한다", () => {
+    const csv = "계좌,거래일,구분,시장,종목코드,종목명,수량,단가,환율\n일반,2026-10-01,매수,,005930,삼성전자,1,70000,\n일반,2026-10-01,매수,,AAPL,애플,1,200,1400\n일반,2026-10-01,매수,코스닥,035720.KQ,카카오,1,50000,\n일반,2026-10-01,매수,미국,TSLA,테슬라,1,300,\n일반,2026-10-01,매수,일본,7203,도요타,1,1,";
+    const { rows, errors } = fromCsv(csv);
+    expect(rows.map((r) => [r.market, r.symbol])).toEqual([["KR", "005930"], ["US", "AAPL"], ["KOSDAQ", "035720"], ["US", "TSLA"]]);
+    expect(errors).toEqual(["6번째 줄: 시장은 국내/해외로 적어 주세요 (비우면 종목코드로 판단해요)"]);
+  });
+
+  it("시장 열이 없어도 읽는다", () => {
+    const { rows, errors } = fromCsv("계좌,거래일,구분,종목코드,종목명,수량,단가\n일반,2026-10-01,매수,000660,SK하이닉스,1,1");
+    expect(errors).toEqual([]);
+    expect(rows[0]).toMatchObject({ market: "KR", fxRate: 1 });
   });
 
   it("따옴표 안의 쉼표와 줄바꿈을 처리한다", () => {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { koreanSource, provider } from "@/lib/market";
+import { provider } from "@/lib/market";
+import { detectKoreanExchange } from "@/lib/market/service";
 import { KR_CODE } from "@/lib/market/naver";
 import type { Market } from "@/lib/portfolio";
 
@@ -21,11 +22,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ market: "US" satisfies Market, name: hit?.name ?? null });
   }
 
-  const info = await koreanSource.lookup(code).catch(() => null);
-  if (info?.market) return NextResponse.json(info);
-  for (const [suffix, market] of [["KS", "KOSPI"], ["KQ", "KOSDAQ"]] as const) {
-    const ok = await provider.quote(`${code}.${suffix}`).then(() => true, () => false);
-    if (ok) return NextResponse.json({ market, name: info?.name ?? null });
-  }
-  return NextResponse.json({ market: null, name: info?.name ?? null });
+  return NextResponse.json(await detectKoreanExchange(code));
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormAction } from "@/lib/hooks/use-form-action";
 import { saveTransaction } from "@/app/actions";
-import { fmtPrice, MARKET_LABEL } from "@/lib/format";
+import { EXCHANGE_LABEL, fmtPrice, MARKET_LABEL } from "@/lib/format";
 import type { Market, Trade } from "@/lib/portfolio";
 import { CloseIcon, EditIcon, PlusIcon } from "./icons";
 
@@ -174,7 +174,7 @@ function TradeForm({
             !symbol.trim()
               ? "종목을 검색해서 선택하세요"
               : !market
-                ? "시장을 확인할 수 없어요. 코스피/코스닥을 선택해 주세요"
+                ? "거래소를 확인할 수 없어요. 코스피/코스닥을 선택해 주세요"
                 : "종목명을 입력하세요",
           );
           return;
@@ -338,7 +338,7 @@ function TradeForm({
                     onClick={() => setMarket(m)}
                     className={`rounded-md px-2.5 py-1 font-medium ${market === m ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
                   >
-                    {MARKET_LABEL[m]}
+                    {EXCHANGE_LABEL[m]}
                   </button>
                 ))}
               </div>

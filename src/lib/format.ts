@@ -19,4 +19,7 @@ export const fmtSigned = (n: number) => `${n > 0 ? "+" : ""}${fmtKrw(n)}`;
 /** 한국 시장 관례: 상승 빨강, 하락 파랑 */
 export const tone = (n: number) => (n > 0 ? "text-up" : n < 0 ? "text-down" : "text-muted");
 
-export const MARKET_LABEL = { KOSPI: "코스피", KOSDAQ: "코스닥", US: "미국" } as const;
+/** 화면 표시는 국내/해외만. 코스피·코스닥 구분은 시세 조회(Yahoo .KS/.KQ)용으로 내부에만 둔다 */
+export const MARKET_LABEL = { KOSPI: "국내", KOSDAQ: "국내", US: "해외" } as const;
+/** 거래소까지 골라야 하는 드문 경우(직접 입력 시 자동 판별 실패)에만 쓴다 */
+export const EXCHANGE_LABEL = { KOSPI: "코스피", KOSDAQ: "코스닥", US: "미국" } as const;

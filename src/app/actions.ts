@@ -9,7 +9,7 @@ import { signIn, signOut } from "@/auth";
 import { fromCsv } from "@/lib/csv";
 import { passwordProblem } from "@/lib/password";
 import { loadTrades, toTrade } from "@/lib/data";
-import { getKoreanNames, getPriceSeries, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
+import { detectKoreanExchange, getKoreanNames, getPriceSeries, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
 import { orderImportRows } from "@/lib/import-order";
 import { addDays } from "@/lib/performance";
 import { FX_SYMBOL } from "@/lib/performance";
@@ -236,19 +236,32 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   if (!(file instanceof File) || file.size === 0) return { error: "CSV 파일을 선택하세요" };
   if (file.size > MAX_IMPORT_BYTES) return { error: "파일이 너무 커요 (최대 2MB)" };
 
-  const { rows, errors } = fromCsv(await file.text());
+  const { rows: parsed, errors } = fromCsv(await file.text());
   if (errors.length) {
     return { error: errors.slice(0, 5).join("\n") + (errors.length > 5 ? `\n외 ${errors.length - 5}건` : "") };
   }
-  if (rows.length === 0) return { error: "가져올 기록이 없어요" };
+  if (parsed.length === 0) return { error: "가져올 기록이 없어요" };
 
   const accounts = await prisma.account.findMany({ where: { userId } });
   const accountId = new Map(accounts.map((a) => [a.name, a.id]));
-  const newAccounts = [...new Set(rows.map((r) => r.account))].filter((n) => !accountId.has(n));
+  const newAccounts = [...new Set(parsed.map((r) => r.account))].filter((n) => !accountId.has(n));
   // 검증 단계에서 쓸 임시 ID (저장할 때 실제 ID로 바꾼다)
   newAccounts.forEach((n) => accountId.set(n, `new:${n}`));
 
   const existing = (await prisma.transaction.findMany({ where: { account: { userId } } })).map(toTrade);
+
+  // 시장이 "국내"로만 적힌 종목은 거래소(코스피/코스닥)를 찾는다: 기존 기록 → 네이버/Yahoo 순
+  const exchangeOf = new Map<string, "KOSPI" | "KOSDAQ" | null>();
+  for (const t of existing) if (t.market !== "US") exchangeOf.set(t.symbol.replace(/\.(KS|KQ)$/, ""), t.market);
+  const unknownKr = [...new Set(parsed.filter((r) => r.market === "KR" && !exchangeOf.has(r.symbol)).map((r) => r.symbol))];
+  await Promise.all(
+    unknownKr.map(async (code) => exchangeOf.set(code, (await detectKoreanExchange(code).catch(() => null))?.market ?? null)),
+  );
+  const unresolved = unknownKr.filter((code) => !exchangeOf.get(code));
+  if (unresolved.length) {
+    return { error: `거래소를 확인하지 못한 종목이 있어요: ${unresolved.slice(0, 5).join(", ")}\n시장 칸에 코스피/코스닥을 적어 주세요` };
+  }
+  const rows = parsed.map((r) => ({ ...r, market: r.market === "KR" ? exchangeOf.get(r.symbol)! : r.market }));
   // 이미 있는 종목은 사용자가 쓰던 이름을 유지한다
   const knownName = new Map(sortTrades(existing).map((t) => [t.symbol, t.name]));
   const englishKr = rows
