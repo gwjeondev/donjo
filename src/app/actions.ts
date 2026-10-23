@@ -10,7 +10,7 @@ import { fromCsv } from "@/lib/csv";
 import { loadTrades, toTrade } from "@/lib/data";
 import { getQuotes } from "@/lib/market/service";
 import { FX_SYMBOL } from "@/lib/performance";
-import { computePositions, findOversell } from "@/lib/portfolio";
+import { computePositions, findOversell, sortTrades } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/session";
 
@@ -172,8 +172,22 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
   }
 
   const record = { ...data, tradeDate: new Date(`${data.tradeDate}T00:00:00Z`) };
-  if (id) await prisma.transaction.update({ where: { id }, data: record });
-  else await prisma.transaction.create({ data: record });
+  if (id) {
+    await prisma.transaction.update({ where: { id }, data: record });
+    // 종목명을 고쳤다면 같은 종목의 다른 기록에도 맞춘다
+    await prisma.transaction.updateMany({
+      where: { account: { userId }, symbol: data.symbol, NOT: { name: data.name } },
+      data: { name: data.name },
+    });
+  } else {
+    // 이미 기록이 있는 종목은 사용자가 정해 둔 이름을 그대로 쓴다 (검색 결과의 긴 영문명으로 바뀌지 않게)
+    const named = await prisma.transaction.findFirst({
+      where: { account: { userId }, symbol: data.symbol },
+      orderBy: { createdAt: "desc" },
+      select: { name: true },
+    });
+    await prisma.transaction.create({ data: { ...record, name: named?.name ?? data.name } });
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -230,6 +244,8 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   newAccounts.forEach((n) => accountId.set(n, `new:${n}`));
 
   const existing = (await prisma.transaction.findMany({ where: { account: { userId } } })).map(toTrade);
+  // 이미 있는 종목은 사용자가 쓰던 이름을 유지한다
+  const knownName = new Map(sortTrades(existing).map((t) => [t.symbol, t.name]));
   const keyOf = (t: { accountId: string; tradeDate: string; type: string; symbol: string; quantity: number; price: number }) =>
     [t.accountId, t.tradeDate, t.type, t.symbol, t.quantity, t.price].join("|");
   const seen = new Set(existing.map(keyOf));
@@ -239,7 +255,7 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       id: `csv-${i}`,
       accountId: accountId.get(r.account)!,
       symbol: normalizeSymbol(r.symbol, r.market),
-      name: r.name,
+      name: knownName.get(normalizeSymbol(r.symbol, r.market)) ?? r.name,
       market: r.market,
       type: r.type,
       quantity: r.quantity,
@@ -324,4 +340,19 @@ export async function changePassword(_: FormState, form: FormData): Promise<Form
   }
   await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(parsed.data.next, 10) } });
   return { ok: true, message: "비밀번호를 변경했습니다" };
+}
+
+// ---------- 종목명 변경 ----------
+
+/** 내 모든 계좌에서 이 종목의 표시 이름을 바꾼다 */
+export async function renameStock(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const symbol = str(form, "symbol");
+  const name = str(form, "name");
+  if (!name) return { error: "종목명을 입력하세요" };
+  if (name.length > 100) return { error: "종목명은 100자 이하로 입력하세요" };
+  const res = await prisma.transaction.updateMany({ where: { account: { userId }, symbol }, data: { name } });
+  if (res.count === 0) return { error: "종목을 찾을 수 없습니다" };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

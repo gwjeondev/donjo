@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { RenameStockButton } from "@/components/rename-stock";
 import { AccountBreakdown, StockPriceChart, StockSummary, type PricePoint } from "@/components/stock-detail";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
@@ -60,6 +61,7 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
             </span>
           }
         >
+          <RenameStockButton symbol={position.symbol} name={position.name} />
           <AddTradeButton accounts={accounts} preset={{ symbol: position.symbol, name: position.name, market: position.market }} />
         </PageHeader>
       </div>
