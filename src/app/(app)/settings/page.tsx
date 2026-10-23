@@ -24,9 +24,10 @@ export default async function SettingsPage() {
   const userId = await requireUserId();
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true } });
   return (
-    <>
+    // 읽기 좋은 폭으로 줄이되, 화면(및 맨 아래 바로가기) 기준 가운데에 둔다
+    <div className="mx-auto max-w-2xl">
       <PageHeader title="설정" />
-      <div className="max-w-2xl space-y-4">
+      <div className="space-y-4">
         <Section title="프로필">
           <ProfileForm name={user.name ?? ""} email={user.email} />
         </Section>
@@ -57,6 +58,6 @@ export default async function SettingsPage() {
           </button>
         </form>
       </div>
-    </>
+    </div>
   );
 }

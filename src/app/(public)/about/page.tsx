@@ -49,13 +49,10 @@ export default async function AboutPage() {
   const loggedIn = !!(await auth())?.user;
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8">
-      <nav className="flex items-center justify-between">
+      <nav className="flex items-center">
         <Link href={loggedIn ? "/dashboard" : "/login"} className="flex items-center gap-2">
           <img src="/icons/icon-192.png" alt="" className="size-8 rounded-lg" />
           <span className="text-lg font-bold">돈조</span>
-        </Link>
-        <Link href={loggedIn ? "/dashboard" : "/login"} className="text-sm font-medium text-brand">
-          {loggedIn ? "대시보드로" : "로그인"}
         </Link>
       </nav>
 
@@ -99,7 +96,10 @@ export default async function AboutPage() {
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {FEATURES.map(({ Icon, title, desc }, i) => (
             // 홀수 개일 때 마지막 카드는 두 칸을 차지해 혼자 남지 않게
-            <div key={title} className={`card p-5 ${i === FEATURES.length - 1 && FEATURES.length % 2 ? "sm:col-span-2" : ""}`}>
+            <div
+              key={title}
+              className={`card p-5 ${i === FEATURES.length - 1 && FEATURES.length % 2 ? "sm:col-span-2" : ""}`}
+            >
               <span className="grid size-10 place-items-center rounded-xl bg-brand/10 text-brand">
                 <Icon className="size-5" />
               </span>
@@ -134,14 +134,13 @@ export default async function AboutPage() {
         </ul>
       </section>
 
-      <footer className="mt-16 space-y-1 border-t border-line pt-6 text-center text-xs text-muted">
+      <footer className="mt-16 border-t border-line pt-6 text-center text-xs text-muted">
         <p>
           문의{" "}
           <a href="mailto:gw4609@gmail.com" className="font-medium text-ink-2 hover:text-brand">
             gw4609@gmail.com
           </a>
         </p>
-        <p>© 돈조</p>
       </footer>
     </main>
   );
