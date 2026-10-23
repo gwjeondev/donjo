@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtPct, tone } from "@/lib/format";
 import type { BenchmarkPoint } from "@/lib/performance";
@@ -11,42 +11,36 @@ const SERIES = [
   { key: "sp500", label: "S&P 500", color: "var(--series-3)", width: 1.75 },
 ] as const;
 
-const RANGES = [
-  { id: "1M", days: 31 },
-  { id: "3M", days: 92 },
-  { id: "1Y", days: 366 },
-  { id: "전체", days: Infinity },
-] as const;
-
 /** 같은 기간 내 수익률(입출금 제외)과 시장 지수 비교. 선택한 기간의 시작을 0%로 맞춘다 */
 export function BenchmarkChart({
   points,
+  base: before,
   missing = [],
   failed = false,
 }: {
+  /** 조회 기간으로 자른 점들 */
   points: BenchmarkPoint[];
+  /** 기간 직전 날. 있으면 그날 종가를 0%로 잡아 첫날 등락까지 포함한다 */
+  base?: BenchmarkPoint;
   /** 시세를 불러오지 못한 지수 (예: ["kospi"]) */
   missing?: string[];
   failed?: boolean;
 }) {
-  const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("전체");
   const data = useMemo(() => {
     if (points.length === 0) return [];
-    const days = RANGES.find((r) => r.id === range)!.days;
-    const last = new Date(points.at(-1)!.date).getTime();
-    const sliced =
-      days === Infinity ? points : points.filter((p) => last - new Date(p.date).getTime() <= days * 86400000);
-    const base = sliced[0];
-    return sliced.map((p) => {
+    const base = before ?? points[0];
+    const rows = points.map((p) => {
       const row: Record<string, number | string> = { date: p.date };
       for (const s of SERIES) row[s.key] = Number(p[s.key]) / Number(base[s.key]) - 1;
       return row;
     });
-  }, [points, range]);
+    // 기준점(0%)을 맨 앞에 넣어 선이 0%에서 출발하게 한다
+    return before ? [{ date: before.date, ...Object.fromEntries(SERIES.map((s) => [s.key, 0])) }, ...rows] : rows;
+  }, [points, before]);
 
   const series = SERIES.filter((s) => !missing.includes(s.key));
 
-  if (points.length < 2) {
+  if (data.length < 2) {
     return (
       <div className="card p-5">
         <h2 className="font-semibold">시장 대비 수익률</h2>
@@ -64,22 +58,9 @@ export function BenchmarkChart({
 
   return (
     <div className="card p-5">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="font-semibold">시장 대비 수익률</h2>
-          <p className="mt-0.5 text-xs text-muted">입출금 제외 · 선택한 기간 시작을 0%로 맞춤</p>
-        </div>
-        <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRange(r.id)}
-              className={`rounded-md px-2.5 py-1 font-medium ${r.id === range ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
-            >
-              {r.id}
-            </button>
-          ))}
-        </div>
+      <div className="mb-3">
+        <h2 className="font-semibold">시장 대비 수익률</h2>
+        <p className="mt-0.5 text-xs text-muted">입출금 제외 · 선택한 기간 시작을 0%로 맞춤</p>
       </div>
       {/* 범례 겸 기간 수익률 (색만으로 구분하지 않도록 이름과 값을 함께) */}
       <ul className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">

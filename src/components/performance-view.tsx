@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
-import type { PeriodRow } from "@/lib/performance";
+import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
   { id: "day", label: "일별", limit: 60 },
@@ -15,10 +15,24 @@ type TabId = (typeof TABS)[number]["id"];
 const label = (period: string, tab: TabId) =>
   tab === "day" ? period.slice(5).replace("-", ".") : tab === "month" ? `${period.slice(2, 4)}.${period.slice(5)}` : period;
 
-export function PerformanceView({ rows, failed = false }: { rows: Record<TabId, PeriodRow[]>; failed?: boolean }) {
+export function PerformanceView({
+  points,
+  startValue = 0,
+  limited = true,
+  failed = false,
+}: {
+  /** 조회 기간으로 자른 일별 자산 */
+  points: DailyPoint[];
+  /** 기간 직전 날의 평가금액 (첫 구간의 기초 금액) */
+  startValue?: number;
+  /** 전체 기간일 때만 최근 N개로 줄여 보여 준다 */
+  limited?: boolean;
+  failed?: boolean;
+}) {
   const [tab, setTab] = useState<TabId>("month");
   const { limit } = TABS.find((t) => t.id === tab)!;
-  const data = rows[tab].slice(-limit);
+  const rows = useMemo(() => aggregate(points, tab, startValue), [points, tab, startValue]);
+  const data = limited ? rows.slice(-limit) : rows;
 
   return (
     <div className="space-y-4">

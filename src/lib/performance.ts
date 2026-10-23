@@ -120,9 +120,10 @@ export interface PeriodRow {
 const periodKey = (date: string, period: Period) =>
   period === "day" ? date : period === "month" ? date.slice(0, 7) : date.slice(0, 4);
 
-export function aggregate(points: DailyPoint[], period: Period): PeriodRow[] {
+export function aggregate(points: DailyPoint[], period: Period, startValue = 0): PeriodRow[] {
   const rows: PeriodRow[] = [];
-  let prevEnd = 0;
+  // 기간 중간부터 자를 때는 직전 날의 평가금액이 첫 구간의 기초 금액이 된다
+  let prevEnd = startValue;
   let cur: (PeriodRow & { growth: number }) | null = null;
   for (const p of points) {
     const k = periodKey(p.date, period);
