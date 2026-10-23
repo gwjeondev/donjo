@@ -2,6 +2,7 @@ import { AccountFilter } from "@/components/account-filter";
 import { CurrencyToggle } from "@/components/currency";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
 import { TradeSearch } from "@/components/trade-search";
+import { TradeSort, type TradeOrder } from "@/components/trade-sort";
 import { ExportButton, ImportButton } from "@/components/csv-actions";
 import { PageHeader } from "@/components/page-header";
 import { AddTradeButton } from "@/components/trade-form";
@@ -15,10 +16,11 @@ export const metadata = { title: "매매기록" };
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; market?: string; q?: string }>;
+  searchParams: Promise<{ account?: string; market?: string; q?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const account = params.account;
+  const order: TradeOrder = params.sort === "old" ? "old" : "new";
   const market: MarketGroup | undefined = params.market === "kr" || params.market === "us" ? params.market : undefined;
   const userId = await requireUserId();
   const [accounts, allTrades] = await Promise.all([
@@ -39,6 +41,8 @@ export default async function TransactionsPage({
           .toLowerCase()
           .includes(q),
     );
+  // 기록은 최신순(거래일, 같은 날은 입력 순서의 역순)으로 읽으므로 오래된순은 뒤집기만 하면 된다
+  if (order === "old") trades.reverse();
   return (
     <>
       <PageHeader
@@ -47,12 +51,13 @@ export default async function TransactionsPage({
         toolbar={
           <>
             {/* 1줄: 무엇을 볼지(계좌·국내/해외), 2줄(모바일)/같은 줄(PC): 종목 검색과 통화 */}
-            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <div className="flex w-full min-w-0 items-center gap-2 @3xl:w-auto">
               <AccountFilter accounts={accounts} value={account} />
               <MarketFilter value={market} />
             </div>
-            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+            <div className="flex w-full min-w-0 items-center gap-2 @3xl:w-auto @3xl:flex-1">
               <TradeSearch value={params.q ?? ""} />
+              <TradeSort value={order} />
               {allTrades.some((t) => t.market === "US") && market !== "kr" && (
                 <div className="ml-auto shrink-0">
                   <CurrencyToggle />

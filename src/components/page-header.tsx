@@ -24,7 +24,12 @@ export function PageHeader({
         {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
       </div>
       {sub && <p className="mt-1 text-sm text-ink-2">{sub}</p>}
-      {toolbar && <div className="mt-4 flex flex-wrap items-center justify-between gap-2">{toolbar}</div>}
+      {/* 사이드바 때문에 화면 폭과 실제 폭이 달라서, 툴바 안쪽은 이 폭(@container)을 기준으로 배치한다 */}
+      {toolbar && (
+        <div className="@container mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">{toolbar}</div>
+        </div>
+      )}
     </div>
   );
 }
