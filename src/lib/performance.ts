@@ -62,6 +62,7 @@ export function buildDailySeries(
 
   for (let date = sorted[0].tradeDate; date <= today; date = addDays(date, 1)) {
     let flow = 0;
+    let bought = 0;
     let hasTrade = false;
     while (ti < sorted.length && sorted[ti].tradeDate === date) {
       const t = sorted[ti++];
@@ -70,7 +71,9 @@ export function buildDailySeries(
       const held = qty.get(t.symbol) ?? 0;
       if (t.type === "BUY") {
         qty.set(t.symbol, held + t.quantity);
-        flow += (t.quantity * t.price + t.fee + t.tax) * fx;
+        const cost = (t.quantity * t.price + t.fee + t.tax) * fx;
+        flow += cost;
+        bought += cost;
       } else {
         const q = Math.min(t.quantity, held);
         qty.set(t.symbol, held - q);
@@ -93,7 +96,9 @@ export function buildDailySeries(
     }
     // 매수금은 당일 시작 자본으로 보고, 매도대금은 장 마감 후 인출로 본다.
     // (작은 기준금액에 큰 매수가 겹쳐 수익률이 폭주하는 것을 막는다)
-    const base = prevValue + Math.max(flow, 0);
+    // 기준금액에는 순투입이 아니라 그날 산 금액 전체를 넣는다. 보유 0에서 같은 날 사고 판 경우
+    // 순투입(산 금액 − 판 금액)만 넣으면 수익률이 -100%로 계산돼 누적 수익률이 0이 되어 버린다
+    const base = prevValue + bought;
     const pnl = value - prevValue - flow;
     const ret = base > 0 ? pnl / base : 0;
     points.push({ date, value, flow, ret });

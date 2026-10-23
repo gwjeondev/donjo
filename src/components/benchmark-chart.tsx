@@ -32,7 +32,11 @@ export function BenchmarkChart({
     const base = before ?? points[0];
     const rows = points.map((p) => {
       const row: Record<string, number | string> = { date: p.date };
-      for (const s of SERIES) row[s.key] = Number(p[s.key]) / Number(base[s.key]) - 1;
+      for (const s of SERIES) {
+        // 기준값이 0이면 나눌 수 없으므로 0%로 둔다 (NaN% 방지)
+        const b = Number(base[s.key]);
+        row[s.key] = b > 0 ? Number(p[s.key]) / b - 1 : 0;
+      }
       return row;
     });
     // 기준점(0%)을 맨 앞에 넣어 선이 0%에서 출발하게 한다

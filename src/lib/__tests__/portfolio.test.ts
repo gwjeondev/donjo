@@ -197,3 +197,20 @@ describe("oversellAt", () => {
     expect(r?.held).toBeCloseTo(0.6);
   });
 });
+
+describe("같은 날 사고 판 경우의 일별 수익률", () => {
+  it("보유 0에서 같은 날 사고 다 팔아도 -100%가 되지 않는다", () => {
+    const trades = [
+      trade({ symbol: "004140.KS", type: "SELL", quantity: 65, price: 6930, fee: 10, tax: 1032, tradeDate: "2021-04-16", createdAt: "2" }),
+      trade({ symbol: "004140.KS", type: "BUY", quantity: 65, price: 7290, fee: 20, tax: 0, tradeDate: "2021-04-16", createdAt: "1" }),
+      trade({ symbol: "005930.KS", type: "BUY", quantity: 1, price: 80000, tradeDate: "2021-04-19", createdAt: "3" }),
+    ];
+    const prices: PriceSeries = new Map([["005930.KS", new Map([["2021-04-19", 80000], ["2021-04-20", 88000]])]]);
+    const pts = buildDailySeries(trades, prices, "2021-04-20");
+    const first = pts[0];
+    expect(first.ret).toBeCloseTo(-(473870 - 449408) / 473870);
+    const growth = pts.reduce((g, p) => g * (1 + p.ret), 1);
+    expect(Number.isFinite(growth) && growth > 0).toBe(true);
+    expect(pts.at(-1)!.ret).toBeCloseTo(0.1);
+  });
+});

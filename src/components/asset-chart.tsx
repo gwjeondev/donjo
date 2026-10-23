@@ -25,7 +25,7 @@ export function AssetChart({ points, failed = false }: { points: Point[]; failed
 
   const last = data.at(-1);
   // 수익률 화면과 같게 기간 직전 날을 기준으로 잡는다
-  const periodReturn = base && last ? (1 + last.cum) / (1 + base.cum) - 1 : 0;
+  const periodReturn = base && last && 1 + base.cum > 0 ? (1 + last.cum) / (1 + base.cum) - 1 : 0;
 
   return (
     <div className="card flex h-full flex-col p-5">
