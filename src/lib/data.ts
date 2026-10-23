@@ -42,7 +42,10 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   const held = positions.filter((p) => p.quantity > 0);
   const [quotes, fx] = await Promise.all([getQuotes(held.map((p) => p.symbol)), getUsdKrw()]);
   const valued = positions.map((p) => valuePosition(p, quotes.get(p.symbol), fx.rate));
-  return { accounts, trades, positions: valued, summary: summarize(valued), fx };
+  // 화면에 보이는 시세 중 가장 오래된 것의 시각 ("n분 전 시세" 표시용)
+  const times = [...quotes.values()].flatMap((q) => (q.fetchedAt ? [q.fetchedAt.getTime()] : []));
+  const quotedAt = times.length ? new Date(Math.min(...times)).toISOString() : null;
+  return { accounts, trades, positions: valued, summary: summarize(valued), fx, quotedAt };
 }
 
 /** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */

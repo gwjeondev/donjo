@@ -6,9 +6,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
-import { toTrade } from "@/lib/data";
+import { loadTrades, toTrade } from "@/lib/data";
+import { getQuotes } from "@/lib/market/service";
+import { FX_SYMBOL } from "@/lib/performance";
+import { computePositions, findOversell } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
-import { findOversell } from "@/lib/portfolio";
 import { requireUserId } from "@/lib/session";
 
 export interface FormState {
@@ -187,4 +189,14 @@ export async function deleteTransaction(id: string): Promise<FormState> {
   await prisma.transaction.delete({ where: { id } });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// ---------- 시세 ----------
+
+/** 보유 종목과 환율 시세를 다시 받아 온다. 외부 API·DB 부담을 줄이려고 1분 이내 시세는 그대로 쓴다 */
+export async function refreshQuotes() {
+  const userId = await requireUserId();
+  const held = computePositions(await loadTrades(userId)).filter((p) => p.quantity > 0);
+  await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL], 60 * 1000);
+  revalidatePath("/", "layout");
 }

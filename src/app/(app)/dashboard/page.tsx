@@ -15,7 +15,7 @@ export const metadata = { title: "대시보드" };
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
-  const [{ accounts, positions, summary, fx }, perf] = await Promise.all([
+  const [{ accounts, positions, summary, fx, quotedAt }, perf] = await Promise.all([
     loadPortfolio(userId),
     loadPerformance(userId),
   ]);
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="전체 자산" sub={<FxNote fx={fx} />}>
+      <PageHeader title="전체 자산" sub={<FxNote fx={fx} quotedAt={quotedAt} />}>
         <AddTradeButton accounts={accounts} />
       </PageHeader>
       <div className="space-y-4">

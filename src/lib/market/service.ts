@@ -13,7 +13,8 @@ const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
 const fromDate = (d: Date) => d.toISOString().slice(0, 10);
 const todayStr = () => fromDate(new Date());
 
-export async function getQuotes(symbols: string[]): Promise<Map<string, Quote>> {
+/** 종목 시세. maxAgeMs보다 오래된 캐시만 외부에서 다시 받는다 */
+export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Promise<Map<string, Quote>> {
   const unique = [...new Set(symbols)];
   if (unique.length === 0) return new Map();
   // DB 캐시 조회가 실패해도 화면이 깨지지 않게 외부 시세로만 진행한다
@@ -27,10 +28,10 @@ export async function getQuotes(symbols: string[]): Promise<Map<string, Quote>> 
   const results = await Promise.all(
     unique.map(async (symbol): Promise<Quote | null> => {
       const c = bySymbol.get(symbol);
-      const fresh = c?.quoteFetchedAt && now - c.quoteFetchedAt.getTime() < QUOTE_TTL_MS;
+      const fresh = c?.quoteFetchedAt && now - c.quoteFetchedAt.getTime() < maxAgeMs;
       if (!fresh) {
         try {
-          const q = await provider.quote(symbol);
+          const q = { ...(await provider.quote(symbol)), fetchedAt: new Date() };
           await prisma.symbolCache.upsert({
             where: { symbol },
             create: { symbol, price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: new Date() },
@@ -47,6 +48,7 @@ export async function getQuotes(symbols: string[]): Promise<Map<string, Quote>> 
         price: Number(c.price),
         previousClose: c.previousClose == null ? null : Number(c.previousClose),
         currency: c.currency,
+        fetchedAt: c.quoteFetchedAt ?? undefined,
       };
     }),
   );

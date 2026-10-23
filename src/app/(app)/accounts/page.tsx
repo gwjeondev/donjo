@@ -11,11 +11,11 @@ export const metadata = { title: "계좌" };
 
 export default async function AccountsPage() {
   const userId = await requireUserId();
-  const { accounts, positions, fx } = await loadPortfolio(userId);
+  const { accounts, positions, fx, quotedAt } = await loadPortfolio(userId);
 
   return (
     <>
-      <PageHeader title="계좌" sub={<FxNote fx={fx} />}>
+      <PageHeader title="계좌" sub={<FxNote fx={fx} quotedAt={quotedAt} />}>
         <AccountButton />
       </PageHeader>
       {accounts.length === 0 && <p className="card p-8 text-center text-sm text-muted">계좌를 추가해 주세요.</p>}

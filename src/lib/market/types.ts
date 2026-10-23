@@ -5,6 +5,8 @@ export interface Quote {
   price: number;
   previousClose: number | null;
   currency: string | null;
+  /** 시세를 받아 온 시각 (캐시면 캐시 저장 시각) */
+  fetchedAt?: Date;
 }
 
 export interface Bar {
