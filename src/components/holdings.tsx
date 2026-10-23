@@ -37,11 +37,11 @@ export function Holdings({
             <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
               <tr>
                 <th className="px-4 py-2.5 text-left font-medium">종목</th>
-                <th className="hidden w-28 px-3 py-2.5 text-right font-medium xl:table-cell">보유수량</th>
-                <th className="w-32 px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
-                <th className="w-36 px-3 py-2.5 text-right font-medium">평가금액</th>
-                <th className="w-36 px-3 py-2.5 text-right font-medium">평가손익</th>
-                <th className="hidden w-20 px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
+                <th className="hidden w-32 px-3 py-2.5 text-right font-medium xl:table-cell">보유수량</th>
+                <th className="w-36 px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
+                <th className="w-40 px-3 py-2.5 text-right font-medium">평가금액</th>
+                <th className="w-40 px-3 py-2.5 text-right font-medium">평가손익</th>
+                <th className="hidden w-24 px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">

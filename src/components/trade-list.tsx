@@ -71,13 +71,13 @@ export function TradeList({
       <table className="hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis">
         <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
           <tr>
-            <th className="w-28 px-4 py-2.5 text-left font-medium">거래일</th>
+            <th className="w-32 px-4 py-2.5 text-left font-medium">거래일</th>
             {showAccount && <th className="w-28 px-3 py-2.5 text-left font-medium">계좌</th>}
             <th className="px-3 py-2.5 text-left font-medium">종목</th>
-            <th className="w-16 px-3 py-2.5 text-center font-medium">구분</th>
-            <th className="w-28 px-3 py-2.5 text-right font-medium">수량</th>
-            <th className="w-32 px-3 py-2.5 text-right font-medium">단가</th>
-            <th className="w-36 px-3 py-2.5 text-right font-medium">거래금액</th>
+            <th className="w-20 px-3 py-2.5 text-center font-medium">구분</th>
+            <th className="w-32 px-3 py-2.5 text-right font-medium">수량</th>
+            <th className="w-36 px-3 py-2.5 text-right font-medium">단가</th>
+            <th className="w-40 px-3 py-2.5 text-right font-medium">거래금액</th>
             <th className="w-20 px-2 py-2.5" />
           </tr>
         </thead>
