@@ -27,18 +27,22 @@ function TradeForm({
   accounts,
   defaultAccountId,
   initial,
+  preset,
   onDone,
 }: {
   accounts: AccountOption[];
   defaultAccountId?: string;
   initial?: Trade & { memo?: string | null };
+  /** 새 기록의 종목을 미리 채운다 (종목 상세 화면에서 추가할 때) */
+  preset?: StockPreset;
   onDone: () => void;
 }) {
   const { state, pending, onSubmit } = useFormAction(saveTransaction);
   const [type, setType] = useState(initial?.type ?? "BUY");
-  const [market, setMarket] = useState<Market>(initial?.market ?? "KOSPI");
-  const [symbol, setSymbol] = useState(initial?.symbol.replace(/\.(KS|KQ)$/, "") ?? "");
-  const [name, setName] = useState(initial?.name ?? "");
+  const stock = initial ?? preset;
+  const [market, setMarket] = useState<Market>(stock?.market ?? "KOSPI");
+  const [symbol, setSymbol] = useState(stock?.symbol.replace(/\.(KS|KQ)$/, "") ?? "");
+  const [name, setName] = useState(stock?.name ?? "");
   const [date, setDate] = useState(initial?.tradeDate ?? today());
   const [fxRate, setFxRate] = useState(initial && initial.market === "US" ? String(initial.fxRate) : "");
   const fxTouched = useRef(!!initial);
@@ -115,7 +119,7 @@ function TradeForm({
         </select>
       </div>
 
-      {!initial && (
+      {!stock && (
         <div className="relative">
           <label className="label" htmlFor="search">종목 검색</label>
           <input
@@ -281,7 +285,23 @@ export function Dialog({ title, open, onClose, children }: { title: string; open
   );
 }
 
-export function AddTradeButton({ accounts, defaultAccountId, label = "매매 기록" }: { accounts: AccountOption[]; defaultAccountId?: string; label?: string }) {
+export interface StockPreset {
+  symbol: string;
+  name: string;
+  market: Market;
+}
+
+export function AddTradeButton({
+  accounts,
+  defaultAccountId,
+  preset,
+  label = "매매 기록",
+}: {
+  accounts: AccountOption[];
+  defaultAccountId?: string;
+  preset?: StockPreset;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -289,7 +309,7 @@ export function AddTradeButton({ accounts, defaultAccountId, label = "매매 기
         <PlusIcon className="size-4" /> {label}
       </button>
       <Dialog title="매매 기록 추가" open={open} onClose={() => setOpen(false)}>
-        <TradeForm accounts={accounts} defaultAccountId={defaultAccountId} onDone={() => setOpen(false)} />
+        <TradeForm accounts={accounts} defaultAccountId={defaultAccountId} preset={preset} onDone={() => setOpen(false)} />
       </Dialog>
     </>
   );

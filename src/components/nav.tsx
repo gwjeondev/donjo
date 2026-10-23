@@ -16,7 +16,7 @@ export function SideNav() {
   return (
     <nav className="space-y-1">
       {ITEMS.map(({ href, label, Icon }) => {
-        const active = path.startsWith(href);
+        const active = path.startsWith(href) || (href === "/dashboard" && path.startsWith("/stocks/"));
         return (
           <Link
             key={href}
@@ -40,7 +40,7 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <div className="grid grid-cols-4">
         {ITEMS.map(({ href, label, Icon }) => {
-          const active = path.startsWith(href);
+          const active = path.startsWith(href) || (href === "/dashboard" && path.startsWith("/stocks/"));
           return (
             <Link
               key={href}

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 
+const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
 const signed = (n: number, c: "KRW" | "USD") => `${n > 0 ? "+" : n < 0 ? "-" : ""}${fmtPrice(Math.abs(n), c)}`;
 
 export function Holdings({
@@ -48,7 +50,12 @@ export function Holdings({
               {rows.map(({ p, d }) => (
                 <tr key={`${p.accountId}-${p.symbol}`} className="hover:bg-surface-2/60">
                   <td className="px-4 py-3" title={p.name}>
-                    <div className="truncate font-medium">{p.name}</div>
+                    <Link
+                      href={stockHref(p.symbol)}
+                      className="block truncate font-medium hover:text-brand hover:underline"
+                    >
+                      {p.name}
+                    </Link>
                     <div className="truncate text-xs text-muted">
                       {MARKET_LABEL[p.market]} · {p.symbol.replace(/\.(KS|KQ)$/, "")}
                       <span className="xl:hidden"> · {fmtQty(p.quantity)}주</span>
@@ -56,7 +63,9 @@ export function Holdings({
                   </td>
                   <td className="hidden px-3 py-3 text-right xl:table-cell">{fmtQty(p.quantity)}</td>
                   <td className="px-3 py-3 text-right">
-                    <div>{d.price != null ? fmtPrice(d.price, d.currency) : <span className="text-muted">시세 없음</span>}</div>
+                    <div>
+                      {d.price != null ? fmtPrice(d.price, d.currency) : <span className="text-muted">시세 없음</span>}
+                    </div>
                     <div className="text-xs text-muted">{fmtPrice(d.avgCost, d.currency)}</div>
                   </td>
                   <td className="px-3 py-3 text-right font-medium">{fmtPrice(d.value, d.currency)}</td>
@@ -75,19 +84,24 @@ export function Holdings({
           {/* 모바일·태블릿: 카드 목록 */}
           <ul className="divide-y divide-line lg:hidden">
             {rows.map(({ p, d }) => (
-              <li key={`${p.accountId}-${p.symbol}`} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{p.name}</div>
-                  <div className="truncate text-xs text-muted">
-                    {fmtQty(p.quantity)}주 · 평단 {fmtPrice(d.avgCost, d.currency)}
+              <li key={`${p.accountId}-${p.symbol}`}>
+                <Link
+                  href={stockHref(p.symbol)}
+                  className="flex items-center justify-between gap-3 px-4 py-3 active:bg-surface-2"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{p.name}</div>
+                    <div className="truncate text-xs text-muted">
+                      {fmtQty(p.quantity)}주 · 평단 {fmtPrice(d.avgCost, d.currency)}
+                    </div>
                   </div>
-                </div>
-                <div className="shrink-0 whitespace-nowrap text-right">
-                  <div className="font-medium">{fmtPrice(d.value, d.currency)}</div>
-                  <div className={`text-xs ${tone(d.pnl)}`}>
-                    {signed(d.pnl, d.currency)} ({fmtPct(d.returnRate)})
+                  <div className="shrink-0 whitespace-nowrap text-right">
+                    <div className="font-medium">{fmtPrice(d.value, d.currency)}</div>
+                    <div className={`text-xs ${tone(d.pnl)}`}>
+                      {signed(d.pnl, d.currency)} ({fmtPct(d.returnRate)})
+                    </div>
                   </div>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>

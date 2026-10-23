@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 const ORDER = ["/dashboard", "/accounts", "/transactions", "/performance"];
 
 function rank(path: string) {
+  if (path.startsWith("/stocks/")) return 0.5;
   const i = ORDER.findIndex((p) => path === p || path.startsWith(`${p}/`));
   return i < 0 ? 0 : i + (path === ORDER[i] ? 0 : 0.5);
 }
