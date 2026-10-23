@@ -15,7 +15,12 @@ const todayStr = () => fromDate(new Date());
 
 export async function getQuotes(symbols: string[]): Promise<Map<string, Quote>> {
   const unique = [...new Set(symbols)];
-  const cached = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } } });
+  if (unique.length === 0) return new Map();
+  // DB 캐시 조회가 실패해도 화면이 깨지지 않게 외부 시세로만 진행한다
+  const cached = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } } }).catch((e) => {
+    console.error("[market] 시세 캐시 조회 실패:", (e as Error).message);
+    return [];
+  });
   const bySymbol = new Map(cached.map((c) => [c.symbol, c]));
   const now = Date.now();
 
@@ -53,37 +58,58 @@ export async function getUsdKrw(): Promise<{ rate: number; live: boolean }> {
   return q ? { rate: q.price, live: true } : { rate: DEFAULT_USD_KRW, live: false };
 }
 
-/** 일봉 캐시를 갱신 (마지막 저장일 1주 전부터 다시 받아 수정 종가를 반영) */
-async function refreshBars(symbol: string, from: string) {
-  const cache = await prisma.symbolCache.findUnique({ where: { symbol } });
-  const first = await prisma.priceBar.findFirst({ where: { symbol }, orderBy: { date: "asc" } });
-  const hasEarliest = first && fromDate(first.date) <= from;
-  if (hasEarliest && cache?.barsFetchedAt && Date.now() - cache.barsFetchedAt.getTime() < BARS_TTL_MS) return;
+/** 한 번에 몇 종목씩 외부 시세를 받아 저장할지 (DB·외부 API에 동시에 몰리지 않게) */
+const REFRESH_CONCURRENCY = 3;
 
-  const last = await prisma.priceBar.findFirst({ where: { symbol }, orderBy: { date: "desc" } });
-  const start = hasEarliest && last ? addDays(fromDate(last.date), -7) : from;
-  try {
-    const bars = await provider.history(symbol, start);
-    await prisma.$transaction([
-      prisma.priceBar.deleteMany({ where: { symbol, date: { gte: toDate(start) } } }),
-      prisma.priceBar.createMany({
-        data: bars.map((b) => ({ symbol, date: toDate(b.date), close: b.close })),
-        skipDuplicates: true,
+/**
+ * 일봉 캐시를 갱신한다. 캐시 상태는 종목 수와 상관없이 쿼리 2번으로 확인하고,
+ * 오래된 종목만 외부에서 받아(마지막 저장일 1주 전부터, 수정 종가 반영) 저장한다.
+ */
+async function refreshBars(symbols: string[], from: string) {
+  const [caches, ranges] = await Promise.all([
+    prisma.symbolCache.findMany({ where: { symbol: { in: symbols } }, select: { symbol: true, barsFetchedAt: true } }),
+    prisma.priceBar.groupBy({ by: ["symbol"], where: { symbol: { in: symbols } }, _min: { date: true }, _max: { date: true } }),
+  ]);
+  const fetchedAt = new Map(caches.map((c) => [c.symbol, c.barsFetchedAt]));
+  const range = new Map(ranges.map((r) => [r.symbol, r]));
+
+  const jobs = symbols.flatMap((symbol) => {
+    const r = range.get(symbol);
+    const hasEarliest = !!r?._min.date && fromDate(r._min.date) <= from;
+    const at = fetchedAt.get(symbol);
+    if (hasEarliest && at && Date.now() - at.getTime() < BARS_TTL_MS) return [];
+    return [{ symbol, start: hasEarliest && r?._max.date ? addDays(fromDate(r._max.date), -7) : from }];
+  });
+
+  for (let i = 0; i < jobs.length; i += REFRESH_CONCURRENCY) {
+    await Promise.all(
+      jobs.slice(i, i + REFRESH_CONCURRENCY).map(async ({ symbol, start }) => {
+        try {
+          const bars = await provider.history(symbol, start);
+          await prisma.$transaction([
+            prisma.priceBar.deleteMany({ where: { symbol, date: { gte: toDate(start) } } }),
+            prisma.priceBar.createMany({
+              data: bars.map((b) => ({ symbol, date: toDate(b.date), close: b.close })),
+              skipDuplicates: true,
+            }),
+            prisma.symbolCache.upsert({
+              where: { symbol },
+              create: { symbol, barsFetchedAt: new Date() },
+              update: { barsFetchedAt: new Date() },
+            }),
+          ]);
+        } catch (e) {
+          console.warn(`[market] history 실패 ${symbol}:`, (e as Error).message);
+        }
       }),
-      prisma.symbolCache.upsert({
-        where: { symbol },
-        create: { symbol, barsFetchedAt: new Date() },
-        update: { barsFetchedAt: new Date() },
-      }),
-    ]);
-  } catch (e) {
-    console.warn(`[market] history 실패 ${symbol}:`, (e as Error).message);
+    );
   }
 }
 
 export async function getPriceSeries(symbols: string[], from: string): Promise<PriceSeries> {
   const unique = [...new Set([...symbols, FX_SYMBOL])];
-  await Promise.all(unique.map((s) => refreshBars(s, from)));
+  // 갱신이 실패해도 이미 저장된 일봉으로 계산한다
+  await refreshBars(unique, from).catch((e) => console.error("[market] 일봉 갱신 실패:", (e as Error).message));
   const bars = await prisma.priceBar.findMany({
     where: { symbol: { in: unique }, date: { gte: toDate(addDays(from, -10)) } },
     orderBy: { date: "asc" },

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       <div className="space-y-4">
         <SummaryCards summary={summary} />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <AssetChart points={cumulative(perf.daily)} />
+          <AssetChart points={cumulative(perf.daily)} failed={perf.failed} />
           <AllocationChart
             groups={[
               { id: "stock", label: "종목", slices: merged.map((p) => ({ key: p.symbol, label: p.name, value: p.valueKrw })) },

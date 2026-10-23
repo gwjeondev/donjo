@@ -18,7 +18,7 @@ const RANGES = [
   { id: "전체", days: Infinity },
 ] as const;
 
-export function AssetChart({ points }: { points: Point[] }) {
+export function AssetChart({ points, failed = false }: { points: Point[]; failed?: boolean }) {
   const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("3M");
   const data = useMemo(() => {
     const days = RANGES.find((r) => r.id === range)!.days;
@@ -56,7 +56,9 @@ export function AssetChart({ points }: { points: Point[] }) {
         </div>
       </div>
       {data.length < 2 ? (
-        <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted">표시할 자산 기록이 아직 없습니다</p>
+        <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted">
+          {failed ? "자산 추이를 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없습니다"}
+        </p>
       ) : (
         <div className="h-60 min-h-60 xl:h-auto xl:flex-1" /* 옆 카드(자산 비중)가 더 길면 그 높이만큼 늘어난다 */>
           <ResponsiveContainer>

@@ -45,7 +45,17 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   return { accounts, trades, positions: valued, summary: summarize(valued), fx };
 }
 
+/** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */
 export async function loadPerformance(userId: string, accountId?: string) {
+  try {
+    return { ...(await computePerformance(userId, accountId)), failed: false };
+  } catch (e) {
+    console.error("[performance] 계산 실패:", e);
+    return { daily: [], day: [], month: [], year: [], failed: true };
+  }
+}
+
+async function computePerformance(userId: string, accountId?: string) {
   const trades = await loadTrades(userId, accountId);
   if (trades.length === 0) return { daily: [], day: [], month: [], year: [] };
   const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);

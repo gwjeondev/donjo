@@ -15,7 +15,7 @@ type TabId = (typeof TABS)[number]["id"];
 const label = (period: string, tab: TabId) =>
   tab === "day" ? period.slice(5).replace("-", ".") : tab === "month" ? `${period.slice(2, 4)}.${period.slice(5)}` : period;
 
-export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) {
+export function PerformanceView({ rows, failed = false }: { rows: Record<TabId, PeriodRow[]>; failed?: boolean }) {
   const [tab, setTab] = useState<TabId>("month");
   const { limit } = TABS.find((t) => t.id === tab)!;
   const data = rows[tab].slice(-limit);
@@ -35,7 +35,9 @@ export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) 
       </div>
 
       {data.length === 0 ? (
-        <p className="card p-8 text-center text-sm text-muted">매매 기록이 생기면 수익률이 표시됩니다.</p>
+        <p className="card p-8 text-center text-sm text-muted">
+          {failed ? "수익률을 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "매매 기록이 생기면 수익률이 표시됩니다."}
+        </p>
       ) : (
         <>
           <div className="card p-5">
