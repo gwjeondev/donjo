@@ -1,6 +1,7 @@
 import { AccountFilter } from "@/components/account-filter";
 import { CurrencyToggle } from "@/components/currency";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
+import { TradeSearch } from "@/components/trade-search";
 import { ExportButton, ImportButton } from "@/components/csv-actions";
 import { PageHeader } from "@/components/page-header";
 import { AddTradeButton } from "@/components/trade-form";
@@ -14,7 +15,7 @@ export const metadata = { title: "매매기록" };
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; market?: string }>;
+  searchParams: Promise<{ account?: string; market?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const account = params.account;
@@ -25,9 +26,19 @@ export default async function TransactionsPage({
     loadTrades(userId, account),
   ]);
   // 국내(코스피·코스닥) / 해외(미국) 구분
-  const trades = market
-    ? allTrades.filter((t) => (market === "us" ? t.market === "US" : t.market !== "US"))
-    : allTrades;
+  const q = (params.q ?? "").trim().toLowerCase();
+  const trades = allTrades
+    .filter((t) => !market || (market === "us" ? t.market === "US" : t.market !== "US"))
+    // 종목 검색: 종목명 또는 종목코드(접미사 .KS/.KQ 제외)에 검색어가 들어 있으면
+    .filter(
+      (t) =>
+        !q ||
+        t.name.toLowerCase().includes(q) ||
+        t.symbol
+          .replace(/\.(KS|KQ)$/, "")
+          .toLowerCase()
+          .includes(q),
+    );
   return (
     <>
       <PageHeader
@@ -35,16 +46,19 @@ export default async function TransactionsPage({
         sub={`총 ${trades.length}건`}
         toolbar={
           <>
-            {/* 왼쪽: 무엇을 볼지(필터), 오른쪽: 어떻게 볼지(통화). 좁으면 통화가 다음 줄 오른쪽으로 */}
-            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+            {/* 1줄: 무엇을 볼지(계좌·국내/해외), 2줄(모바일)/같은 줄(PC): 종목 검색과 통화 */}
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
               <AccountFilter accounts={accounts} value={account} />
               <MarketFilter value={market} />
             </div>
-            {trades.some((t) => t.market === "US") && (
-              <div className="ml-auto">
-                <CurrencyToggle />
-              </div>
-            )}
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+              <TradeSearch value={params.q ?? ""} />
+              {allTrades.some((t) => t.market === "US") && market !== "kr" && (
+                <div className="ml-auto shrink-0">
+                  <CurrencyToggle />
+                </div>
+              )}
+            </div>
           </>
         }
       >
@@ -52,7 +66,12 @@ export default async function TransactionsPage({
         <ExportButton accountId={account} />
         <AddTradeButton accounts={accounts} defaultAccountId={account} label="추가" />
       </PageHeader>
-      <TradeList trades={trades} accounts={accounts} showAccount={!account} />
+      <TradeList
+        trades={trades}
+        accounts={accounts}
+        showAccount={!account}
+        emptyText={allTrades.length && (q || market) ? "조건에 맞는 매매 기록이 없어요." : undefined}
+      />
     </>
   );
 }
