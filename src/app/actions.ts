@@ -9,7 +9,9 @@ import { signIn, signOut } from "@/auth";
 import { fromCsv } from "@/lib/csv";
 import { passwordProblem } from "@/lib/password";
 import { loadTrades, toTrade } from "@/lib/data";
-import { getKoreanNames, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
+import { getKoreanNames, getPriceSeries, getQuotes, hasHangul, isKoreanSymbol, localizeStockNames } from "@/lib/market/service";
+import { orderImportRows } from "@/lib/import-order";
+import { addDays } from "@/lib/performance";
 import { FX_SYMBOL } from "@/lib/performance";
 import { computePositions, findOversell, sortTrades } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
@@ -253,40 +255,68 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
     .map((r) => normalizeSymbol(r.symbol, r.market))
     .filter((sym, i) => isKoreanSymbol(sym) && !knownName.has(sym) && !hasHangul(rows[i].name));
   const officialName = await getKoreanNames(englishKr).catch(() => new Map<string, string>());
+
+  // 미국 주식의 빈 환율은 거래일(휴장일이면 직전 거래일) 원/달러 환율로 채운다
+  const fxDates = [...new Set(rows.filter((r) => r.market === "US" && !r.fxRate).map((r) => r.tradeDate))];
+  const fxOn = new Map<string, number>();
+  if (fxDates.length) {
+    const from = addDays(fxDates.reduce((m, d) => (d < m ? d : m)), -10);
+    const fx = (await getPriceSeries([], from).catch(() => new Map())).get(FX_SYMBOL) as Map<string, number> | undefined;
+    const days = fx ? [...fx.keys()].sort() : [];
+    for (const d of fxDates) {
+      const prev = days.filter((x) => x <= d).at(-1);
+      if (prev) fxOn.set(d, fx!.get(prev)!);
+    }
+    const missing = fxDates.filter((d) => !fxOn.has(d));
+    if (missing.length) {
+      return { error: `${missing.slice(0, 3).join(", ")} 환율을 불러오지 못했어요. CSV의 환율 칸을 채워 주세요` };
+    }
+  }
+
   const keyOf = (t: { accountId: string; tradeDate: string; type: string; symbol: string; quantity: number; price: number }) =>
     [t.accountId, t.tradeDate, t.type, t.symbol, t.quantity, t.price].join("|");
-  const seen = new Set(existing.map(keyOf));
+  // 이미 있는 기록은 그 개수만큼만 건너뛴다 (같은 날 같은 가격에 나눠 산 기록도 살린다)
+  const existingCount = new Map<string, number>();
+  for (const t of existing) existingCount.set(keyOf(t), (existingCount.get(keyOf(t)) ?? 0) + 1);
 
-  const incoming = rows
-    .map((r, i) => ({
-      id: `csv-${i}`,
-      accountId: accountId.get(r.account)!,
-      symbol: normalizeSymbol(r.symbol, r.market),
-      name: knownName.get(normalizeSymbol(r.symbol, r.market)) ?? officialName.get(normalizeSymbol(r.symbol, r.market)) ?? r.name,
-      market: r.market,
-      type: r.type,
-      quantity: r.quantity,
-      price: r.price,
-      fee: r.fee,
-      tax: r.tax,
-      fxRate: r.fxRate,
-      tradeDate: r.tradeDate,
-      memo: r.memo || null,
-      createdAt: new Date().toISOString(),
-    }))
+  const candidates = rows
+    .map((r, i) => {
+      const symbol = normalizeSymbol(r.symbol, r.market);
+      return {
+        id: `csv-${i}`,
+        accountId: accountId.get(r.account)!,
+        symbol,
+        name: knownName.get(symbol) ?? officialName.get(symbol) ?? r.name,
+        market: r.market,
+        type: r.type,
+        quantity: r.quantity,
+        price: r.price,
+        fee: r.fee,
+        tax: r.tax,
+        fxRate: r.market === "US" ? r.fxRate || fxOn.get(r.tradeDate)! : 1,
+        tradeDate: r.tradeDate,
+        memo: r.memo || null,
+      };
+    })
     .filter((t) => {
       const k = keyOf(t);
-      if (seen.has(k)) return false;
-      seen.add(k);
+      const left = existingCount.get(k) ?? 0;
+      if (left > 0) {
+        existingCount.set(k, left - 1);
+        return false;
+      }
       return true;
     });
-  const skipped = rows.length - incoming.length;
-  if (incoming.length === 0) return { ok: true, message: `새로 추가할 기록이 없어요 (중복 ${skipped}건 건너뜀)` };
+  const skipped = rows.length - candidates.length;
+  if (candidates.length === 0) return { ok: true, message: `새로 추가할 기록이 없어요 (중복 ${skipped}건 건너뜀)` };
 
-  const oversell = findOversell([...existing, ...incoming]);
-  if (oversell) {
-    return { error: `${oversell.tradeDate} ${oversell.name} 매도 수량이 그 시점 보유 수량보다 많아요` };
+  // 같은 날짜 안의 실제 거래 순서를 찾는다 (증권사 파일은 보통 최신순)
+  const ordered = orderImportRows(existing, candidates);
+  if (!ordered.rows) {
+    const o = ordered.oversell;
+    return { error: `${o.tradeDate} ${o.name} 매도 수량이 그 시점 보유 수량보다 많아요` };
   }
+  const incoming = ordered.rows;
 
   await prisma.$transaction(async (tx) => {
     for (const name of newAccounts) {
@@ -308,6 +338,7 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
         fxRate: t.fxRate,
         memo: t.memo,
         tradeDate: new Date(`${t.tradeDate}T00:00:00Z`),
+        createdAt: new Date(t.createdAt),
       })),
     });
   });

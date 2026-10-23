@@ -40,7 +40,8 @@ function ImportForm({ onDone }: { onDone: () => void }) {
         <p className="mt-1 break-all font-mono text-[11px] text-muted">{CSV_COLUMNS.join(", ")}</p>
         <ul className="mt-2 list-disc space-y-0.5 pl-4">
           <li>구분: 매수/매도 · 시장: 코스피/코스닥/미국 · 거래일: YYYY-MM-DD</li>
-          <li>수수료·세금·환율·메모는 비워도 돼요 (미국 주식은 환율 필요)</li>
+          <li>수수료·세금·환율·메모는 비워도 돼요 (미국 주식 환율을 비우면 거래일 환율로 채워요)</li>
+          <li>최신순·오래된순 어느 쪽으로 정렬된 파일이든 괜찮아요</li>
           <li>없는 계좌는 새로 만들고, 이미 있는 기록은 건너뛰어요</li>
           <li>한 줄이라도 잘못되면 아무것도 저장하지 않아요</li>
         </ul>

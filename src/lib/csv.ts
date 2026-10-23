@@ -17,6 +17,7 @@ export interface CsvTrade {
   price: number;
   fee: number;
   tax: number;
+  /** 1 USD 당 KRW. 미국 주식에서 0이면 가져올 때 거래일 환율로 채운다 */
   fxRate: number;
   memo: string;
 }
@@ -117,7 +118,7 @@ export function fromCsv(text: string): { rows: CsvTrade[]; errors: string[] } {
       !r.symbol || !r.name ? "종목코드와 종목명이 필요해요" :
       !(r.quantity > 0) || !(r.price > 0) ? "수량과 단가는 0보다 커야 해요" :
       !(r.fee >= 0) || !(r.tax >= 0) ? "수수료·세금이 올바르지 않아요" :
-      market === "US" && !(r.fxRate > 0) ? "미국 주식은 환율이 필요해요" :
+      market === "US" && !(r.fxRate >= 0) ? "환율이 올바르지 않아요" :
       null;
     if (problem) errors.push(`${line}번째 줄: ${problem}`);
     else rows.push(r as CsvTrade);
