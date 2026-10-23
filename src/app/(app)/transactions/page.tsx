@@ -1,5 +1,6 @@
 import { AccountFilter } from "@/components/account-filter";
 import { CurrencyToggle } from "@/components/currency";
+import { ExportButton, ImportButton } from "@/components/csv-actions";
 import { PageHeader } from "@/components/page-header";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
@@ -28,6 +29,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           </>
         }
       >
+        <ImportButton />
+        <ExportButton accountId={account} />
         <AddTradeButton accounts={accounts} defaultAccountId={account} label="추가" />
       </PageHeader>
       <TradeList trades={trades} accounts={accounts} showAccount={!account} />

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
+import { fromCsv } from "@/lib/csv";
 import { loadTrades, toTrade } from "@/lib/data";
 import { getQuotes } from "@/lib/market/service";
 import { FX_SYMBOL } from "@/lib/performance";
@@ -16,6 +17,7 @@ import { requireUserId } from "@/lib/session";
 export interface FormState {
   error?: string;
   ok?: boolean;
+  message?: string;
 }
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -199,4 +201,96 @@ export async function refreshQuotes() {
   const held = computePositions(await loadTrades(userId)).filter((p) => p.quantity > 0);
   await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL], 60 * 1000);
   revalidatePath("/", "layout");
+}
+
+// ---------- CSV 가져오기 ----------
+
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+
+/**
+ * CSV로 매매 기록을 한꺼번에 추가한다. 하나라도 잘못되면 아무것도 저장하지 않는다.
+ * 없는 계좌는 이름으로 새로 만들고, 이미 있는 기록(같은 계좌·날짜·구분·종목·수량·단가)은 건너뛴다.
+ */
+export async function importTrades(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "CSV 파일을 선택하세요" };
+  if (file.size > MAX_IMPORT_BYTES) return { error: "파일이 너무 큽니다 (최대 2MB)" };
+
+  const { rows, errors } = fromCsv(await file.text());
+  if (errors.length) {
+    return { error: errors.slice(0, 5).join("\n") + (errors.length > 5 ? `\n외 ${errors.length - 5}건` : "") };
+  }
+  if (rows.length === 0) return { error: "가져올 기록이 없습니다" };
+
+  const accounts = await prisma.account.findMany({ where: { userId } });
+  const accountId = new Map(accounts.map((a) => [a.name, a.id]));
+  const newAccounts = [...new Set(rows.map((r) => r.account))].filter((n) => !accountId.has(n));
+  // 검증 단계에서 쓸 임시 ID (저장할 때 실제 ID로 바꾼다)
+  newAccounts.forEach((n) => accountId.set(n, `new:${n}`));
+
+  const existing = (await prisma.transaction.findMany({ where: { account: { userId } } })).map(toTrade);
+  const keyOf = (t: { accountId: string; tradeDate: string; type: string; symbol: string; quantity: number; price: number }) =>
+    [t.accountId, t.tradeDate, t.type, t.symbol, t.quantity, t.price].join("|");
+  const seen = new Set(existing.map(keyOf));
+
+  const incoming = rows
+    .map((r, i) => ({
+      id: `csv-${i}`,
+      accountId: accountId.get(r.account)!,
+      symbol: normalizeSymbol(r.symbol, r.market),
+      name: r.name,
+      market: r.market,
+      type: r.type,
+      quantity: r.quantity,
+      price: r.price,
+      fee: r.fee,
+      tax: r.tax,
+      fxRate: r.fxRate,
+      tradeDate: r.tradeDate,
+      memo: r.memo || null,
+      createdAt: new Date().toISOString(),
+    }))
+    .filter((t) => {
+      const k = keyOf(t);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  const skipped = rows.length - incoming.length;
+  if (incoming.length === 0) return { ok: true, message: `새로 추가할 기록이 없습니다 (중복 ${skipped}건 건너뜀)` };
+
+  const oversell = findOversell([...existing, ...incoming]);
+  if (oversell) {
+    return { error: `${oversell.tradeDate} ${oversell.name} 매도 수량이 그 시점 보유 수량보다 많습니다` };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const name of newAccounts) {
+      const a = await tx.account.create({ data: { userId, name } });
+      accountId.set(name, a.id);
+    }
+    const realId = new Map(newAccounts.map((n) => [`new:${n}`, accountId.get(n)!]));
+    await tx.transaction.createMany({
+      data: incoming.map((t) => ({
+        accountId: realId.get(t.accountId) ?? t.accountId,
+        symbol: t.symbol,
+        name: t.name,
+        market: t.market,
+        type: t.type,
+        quantity: t.quantity,
+        price: t.price,
+        fee: t.fee,
+        tax: t.tax,
+        fxRate: t.fxRate,
+        memo: t.memo,
+        tradeDate: new Date(`${t.tradeDate}T00:00:00Z`),
+      })),
+    });
+  });
+  revalidatePath("/", "layout");
+  const parts = [`${incoming.length}건 추가`];
+  if (skipped) parts.push(`중복 ${skipped}건 건너뜀`);
+  if (newAccounts.length) parts.push(`새 계좌 ${newAccounts.join(", ")}`);
+  return { ok: true, message: parts.join(" · ") };
 }

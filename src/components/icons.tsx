@@ -22,3 +22,5 @@ export const SunIcon = base(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M1
 export const MoonIcon = base(<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />);
 export const MonitorIcon = base(<><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>);
 export const RefreshIcon = base(<><path d="M20 11a8 8 0 0 0-14.9-3.9L3 9" /><path d="M3 4v5h5" /><path d="M4 13a8 8 0 0 0 14.9 3.9L21 15" /><path d="M21 20v-5h-5" /></>);
+export const DownloadIcon = base(<><path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></>);
+export const UploadIcon = base(<><path d="M12 20V9" /><path d="m7 14 5-5 5 5" /><path d="M5 4h14" /></>);
