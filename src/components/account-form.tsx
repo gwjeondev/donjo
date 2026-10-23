@@ -20,7 +20,7 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
     if (state.ok) onDone();
   }, [state, onDone]);
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form method="post" onSubmit={onSubmit} className="space-y-4">
       {initial && <input type="hidden" name="id" value={initial.id} />}
       <div>
         <label className="label" htmlFor="acc-name">계좌 이름</label>

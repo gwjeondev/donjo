@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 // 하단 탭 순서. 오른쪽 탭으로 가면 오른쪽에서, 왼쪽 탭으로 가면 왼쪽에서 들어온다.
 // 하위 화면(예: 계좌 상세)은 부모 탭보다 한 단계 오른쪽으로 본다.
-const ORDER = ["/dashboard", "/accounts", "/transactions", "/performance"];
+const ORDER = ["/dashboard", "/accounts", "/transactions", "/performance", "/settings"];
 
 function rank(path: string) {
   if (path.startsWith("/stocks/")) return 0.5;

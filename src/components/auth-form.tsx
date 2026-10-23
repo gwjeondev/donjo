@@ -7,7 +7,7 @@ import { login, register } from "@/app/actions";
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const { state, pending, onSubmit } = useFormAction(mode === "login" ? login : register);
   return (
-    <form onSubmit={onSubmit} className="card space-y-4 p-6">
+    <form method="post" onSubmit={onSubmit} className="card space-y-4 p-6">
       {mode === "register" && (
         <div>
           <label className="label" htmlFor="name">이름 (선택)</label>

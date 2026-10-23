@@ -32,7 +32,7 @@ function ImportForm({ onDone }: { onDone: () => void }) {
     }
   }, [state, onDone]);
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form method="post" onSubmit={onSubmit} className="space-y-4">
       <div className="rounded-lg bg-surface-2 p-3 text-xs leading-relaxed text-ink-2">
         <p>
           <b>내보내기</b>로 받은 파일과 같은 형식의 CSV를 올려 주세요. 첫 줄은 열 이름입니다.

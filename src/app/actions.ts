@@ -294,3 +294,34 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   if (newAccounts.length) parts.push(`새 계좌 ${newAccounts.join(", ")}`);
   return { ok: true, message: parts.join(" · ") };
 }
+
+// ---------- 계정 설정 ----------
+
+export async function updateProfile(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const name = str(form, "name");
+  if (name.length > 50) return { error: "이름은 50자 이하로 입력하세요" };
+  // 이름은 다른 화면에 표시되지 않으므로 화면 전체를 다시 그리지 않는다
+  await prisma.user.update({ where: { id: userId }, data: { name: name || null } });
+  return { ok: true, message: "저장했습니다" };
+}
+
+const passwordSchema = z
+  .object({
+    current: z.string().min(1, "현재 비밀번호를 입력하세요"),
+    next: z.string().min(8, "새 비밀번호는 8자 이상이어야 합니다"),
+    confirm: z.string(),
+  })
+  .refine((v) => v.next === v.confirm, { message: "새 비밀번호가 서로 다릅니다" });
+
+export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const parsed = passwordSchema.safeParse({ current: str(form, "current"), next: str(form, "next"), confirm: str(form, "confirm") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !(await bcrypt.compare(parsed.data.current, user.passwordHash))) {
+    return { error: "현재 비밀번호가 올바르지 않습니다" };
+  }
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(parsed.data.next, 10) } });
+  return { ok: true, message: "비밀번호를 변경했습니다" };
+}

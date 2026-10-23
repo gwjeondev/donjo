@@ -91,7 +91,7 @@ function TradeForm({
   const currency = market === "US" ? "USD" : "원";
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form method="post" onSubmit={onSubmit} className="space-y-4">
       {initial && <input type="hidden" name="id" value={initial.id} />}
       <input type="hidden" name="type" value={type} />
 

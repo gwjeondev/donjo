@@ -1,0 +1,54 @@
+import { ExportButton } from "@/components/csv-actions";
+import { PageHeader } from "@/components/page-header";
+import { PasswordForm, ProfileForm } from "@/components/settings-forms";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { prisma } from "@/lib/db";
+import { requireUserId } from "@/lib/session";
+import { logout } from "@/app/actions";
+import { LogoutIcon } from "@/components/icons";
+
+export const metadata = { title: "설정" };
+
+function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <section className="card p-5">
+      <h2 className="font-semibold">{title}</h2>
+      {desc && <p className="mt-1 text-sm text-ink-2">{desc}</p>}
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+export default async function SettingsPage() {
+  const userId = await requireUserId();
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true } });
+  return (
+    <>
+      <PageHeader title="설정" />
+      <div className="max-w-2xl space-y-4">
+        <Section title="프로필">
+          <ProfileForm name={user.name ?? ""} email={user.email} />
+        </Section>
+        <Section title="비밀번호 변경">
+          <PasswordForm />
+        </Section>
+        <Section title="화면 테마" desc="이 기기에만 적용됩니다.">
+          <div className="max-w-xs">
+            <ThemeToggle full />
+          </div>
+        </Section>
+        <Section
+          title="데이터 백업"
+          desc="모든 매매 기록을 CSV 파일로 받습니다. 매매기록 화면의 '가져오기'로 다시 불러올 수 있어요."
+        >
+          <ExportButton />
+        </Section>
+        <form action={logout}>
+          <button className="btn-ghost w-full sm:w-auto">
+            <LogoutIcon className="size-4" /> 로그아웃
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
