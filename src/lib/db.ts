@@ -2,26 +2,46 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const isPooled = (url?: string) => !!url && /^prisma(\+postgres)?:\/\//.test(url);
+// 우선순위대로 살펴볼 접속 주소 환경변수
+const URL_ENVS = ["ACCELERATE_URL", "PRISMA_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL"] as const;
+
+/** Prisma Accelerate (HTTP 커넥션 풀링): prisma:// 또는 prisma+postgres:// */
+const isAccelerate = (url: string) => /^prisma(\+postgres)?:\/\//.test(url);
+
+/** TCP 커넥션 풀러 (예: Prisma Postgres의 pooled.db.prisma.io) */
+function isPooledHost(url: string) {
+  try {
+    return new URL(url).hostname.startsWith("pooled.");
+  } catch {
+    return false;
+  }
+}
+
+function withParams(url: string, params: Record<string, string>) {
+  const u = new URL(url);
+  for (const [k, v] of Object.entries(params)) if (!u.searchParams.has(k)) u.searchParams.set(k, v);
+  return u.toString();
+}
 
 /**
- * 앱 쿼리용 접속 주소를 고른다. (마이그레이션은 schema의 DATABASE_URL을 그대로 쓴다)
- * 1) Prisma Accelerate(커넥션 풀링) 주소가 있으면 그것을 쓴다. Vercel의 Prisma Postgres 연동은 보통
- *    PRISMA_DATABASE_URL에 넣어 준다.
- * 2) 직접 연결뿐이면, 서버리스(Vercel)에서는 인스턴스마다 커넥션을 여러 개 열어 DB 동시 접속 한도를
- *    넘기 쉬우므로 인스턴스당 1개로 제한한다.
+ * 앱 쿼리용 접속 주소를 고른다. (마이그레이션은 schema의 DATABASE_URL = 직접 연결을 그대로 쓴다)
+ * 서버리스(Vercel)에서 직접 연결을 쓰면 인스턴스마다 커넥션을 열어 DB 동시 접속 한도를 넘기 쉬우므로
+ * 1) Accelerate 주소 → 2) 풀러 주소(pooled.*) → 3) 직접 연결(인스턴스당 1개로 제한) 순으로 쓴다.
  */
-function resolveDatasource(): { url?: string; mode: string } {
-  const candidates = [process.env.PRISMA_DATABASE_URL, process.env.DATABASE_URL];
-  const pooled = candidates.find(isPooled);
-  if (pooled) return { url: pooled, mode: "accelerate" };
+export function resolveDatasource(env: Record<string, string | undefined> = process.env): { url?: string; mode: string } {
+  const urls = URL_ENVS.map((k) => env[k]).filter((u): u is string => !!u);
 
-  const direct = process.env.DATABASE_URL || process.env.PRISMA_DATABASE_URL;
-  if (!direct || !process.env.VERCEL) return { url: direct || undefined, mode: "direct" };
+  const accelerate = urls.find(isAccelerate);
+  if (accelerate) return { url: accelerate, mode: "accelerate" };
+
+  const pooled = urls.find(isPooledHost);
+  // 트랜잭션 모드 풀러는 prepared statement를 공유하지 못하므로 Prisma의 pgbouncer 모드를 켠다
+  if (pooled) return { url: withParams(pooled, { pgbouncer: "true" }), mode: "pooled (pgbouncer=true)" };
+
+  const direct = env.DATABASE_URL || urls[0];
+  if (!direct || !env.VERCEL) return { url: direct, mode: "direct" };
   try {
-    const u = new URL(direct);
-    if (!u.searchParams.has("connection_limit")) u.searchParams.set("connection_limit", "1");
-    return { url: u.toString(), mode: `direct (connection_limit=${u.searchParams.get("connection_limit")})` };
+    return { url: withParams(direct, { connection_limit: "1" }), mode: "direct (connection_limit=1)" };
   } catch {
     return { url: direct, mode: "direct" };
   }

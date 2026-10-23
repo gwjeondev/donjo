@@ -74,9 +74,11 @@ npm run build
 
 Neon 대신 Supabase 같은 외부 Postgres를 쓰려면 2번 대신 `DATABASE_URL`을 직접 넣으면 됩니다.
 
-> **Prisma Postgres를 연결한 경우:** 연동이 `DATABASE_URL`(직접 연결)과 `PRISMA_DATABASE_URL`(커넥션 풀링)을 함께 넣어 줍니다.
-> 앱은 `PRISMA_DATABASE_URL`이 있으면 그 주소로 쿼리하므로, 서버리스 환경에서 동시 접속 한도 오류(P2037)가 나지 않습니다.
-> 마이그레이션은 `DATABASE_URL`을 씁니다.
+> **DB 동시 접속 한도(P2037) 오류 방지:** Vercel 같은 서버리스에서는 서버가 여러 개 떠서 DB 접속이 쉽게 늘어납니다.
+> 앱은 `ACCELERATE_URL` → `PRISMA_DATABASE_URL` → `DATABASE_URL` → `POSTGRES_URL` 순으로 살펴서
+> 풀링 주소(Accelerate `prisma+postgres://` 또는 호스트가 `pooled.`로 시작하는 주소, 예: `pooled.db.prisma.io`)가 있으면 그 주소로 쿼리합니다.
+> 풀링 주소가 없으면 서버 하나당 DB 접속을 1개로 제한합니다. 마이그레이션은 항상 `DATABASE_URL`(직접 연결)을 씁니다.
+> 어떤 방식으로 접속했는지는 서버 로그의 `[db] ...` 줄에서 확인할 수 있습니다.
 
 ## 웹앱(PWA)으로 설치
 
