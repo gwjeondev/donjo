@@ -13,7 +13,8 @@ import { detectKoreanExchange, getKoreanNames, getPriceSeries, getQuotes, hasHan
 import { orderImportRows } from "@/lib/import-order";
 import { addDays } from "@/lib/performance";
 import { FX_SYMBOL } from "@/lib/performance";
-import { computePositions, findOversell, sortTrades } from "@/lib/portfolio";
+import { fmtQty } from "@/lib/format";
+import { computePositions, findOversell, oversellAt, quantityAt, sortTrades, type Trade } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/session";
 
@@ -129,6 +130,23 @@ const txSchema = z.object({
   memo: z.string().max(200).optional(),
 });
 
+/**
+ * 매도 초과 오류 메시지. 그 시점 이 계좌의 보유 수량을 알려 주고,
+ * 다른 계좌에 충분히 있으면 계좌를 잘못 고른 것일 수 있어 그 계좌 이름도 알려 준다.
+ */
+function oversellMessage(o: { trade: Trade; held: number }, trades: Trade[], accountName: Map<string, string>) {
+  const t = o.trade;
+  const elsewhere = [...accountName]
+    .filter(([id]) => id !== t.accountId)
+    .filter(([id]) => quantityAt(trades.filter((x) => x.accountId === id), t.symbol, t.tradeDate) >= t.quantity - 1e-6)
+    .map(([, n]) => `'${n}'`);
+  const where = accountName.get(t.accountId) ?? "선택한";
+  return (
+    `${t.tradeDate} 기준 '${where}' 계좌의 ${t.name} 보유 수량은 ${fmtQty(o.held)}주인데 매도 수량이 ${fmtQty(t.quantity)}주예요.` +
+    (elsewhere.length ? ` 이 종목은 ${elsewhere.join(", ")} 계좌에 있어요. 계좌를 확인해 주세요.` : "")
+  );
+}
+
 /** 코스피/코스닥 종목코드(6자리)를 Yahoo 심볼로 정규화 */
 function normalizeSymbol(symbol: string, market: "KOSPI" | "KOSDAQ" | "US") {
   const base = symbol.replace(/\.(KS|KQ)$/, "");
@@ -165,18 +183,24 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
     return { error: "거래 기록을 찾을 수 없어요" };
   }
 
-  // 저장 후에도 모든 매도가 보유 수량 이내인지 확인
-  const existing = await prisma.transaction.findMany({
-    where: { accountId: data.accountId, symbol: data.symbol, NOT: id ? { id } : undefined },
-  });
-  const candidate = {
+  // 저장 후에도 모든 매도가 보유 수량 이내인지 확인 (다른 계좌 안내를 위해 모든 계좌의 같은 종목을 읽는다)
+  const sameSymbol = (
+    await prisma.transaction.findMany({ where: { account: { userId }, symbol: data.symbol } })
+  ).map(toTrade);
+  const original = id ? sameSymbol.find((t) => t.id === id) : undefined;
+  const candidate: Trade = {
     ...data,
     id: id || "new",
-    tradeDate: data.tradeDate,
-    createdAt: new Date().toISOString(),
+    name: data.name,
+    memo: data.memo ?? null,
+    // 고칠 때는 원래 순서를 유지해야 같은 날 매수·매도 순서가 뒤바뀌지 않는다
+    createdAt: original?.createdAt ?? new Date().toISOString(),
   };
-  if (findOversell([...existing.map(toTrade), candidate])) {
-    return { error: "매도 수량이 해당 시점의 보유 수량보다 많아요" };
+  const others = sameSymbol.filter((t) => t.id !== id);
+  const problem = oversellAt([...others.filter((t) => t.accountId === data.accountId), candidate]);
+  if (problem) {
+    const accounts = await prisma.account.findMany({ where: { userId } });
+    return { error: oversellMessage(problem, [...others, candidate], new Map(accounts.map((a) => [a.id, a.name]))) };
   }
 
   const record = { ...data, tradeDate: new Date(`${data.tradeDate}T00:00:00Z`) };
@@ -326,8 +350,10 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   // 같은 날짜 안의 실제 거래 순서를 찾는다 (증권사 파일은 보통 최신순)
   const ordered = orderImportRows(existing, candidates);
   if (!ordered.rows) {
-    const o = ordered.oversell;
-    return { error: `${o.tradeDate} ${o.name} 매도 수량이 그 시점 보유 수량보다 많아요` };
+    const all = [...existing, ...candidates.map((c, i) => ({ ...c, createdAt: new Date(i).toISOString() }))];
+    const o = oversellAt(all.filter((t) => t.accountId === ordered.oversell.accountId && t.symbol === ordered.oversell.symbol));
+    const name = new Map([...accountId].map(([n, id]) => [id, n]));
+    return { error: o ? oversellMessage(o, all, name) : `${ordered.oversell.tradeDate} ${ordered.oversell.name} 매도 수량이 그 시점 보유 수량보다 많아요` };
   }
   const incoming = ordered.rows;
 

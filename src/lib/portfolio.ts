@@ -178,18 +178,28 @@ export function summarize(positions: ValuedPosition[]): Summary {
   };
 }
 
-/** 보유 수량을 초과하는 매도가 있으면 그 거래를 반환 */
-export function findOversell(trades: Trade[]): Trade | null {
+/**
+ * 수량은 DB에 소수 6자리까지 저장된다. 증권사 화면의 소수점 주식 수량도 반올림된 값이라,
+ * 매수 합계와 매도 수량이 마지막 자리(0.000001주)만큼 어긋나는 것은 전량 매도로 본다.
+ */
+const QTY_TOLERANCE = 1e-6 + 1e-9;
+
+/** 보유 수량을 초과하는 매도가 있으면 그 거래와 그 직전 보유 수량을 반환 */
+export function oversellAt<T extends Trade>(trades: T[]): { trade: T; held: number } | null {
   const held = new Map<string, number>();
   for (const t of sortTrades(trades)) {
     const q = held.get(key(t)) ?? 0;
     if (t.type === "BUY") held.set(key(t), q + t.quantity);
     else {
-      if (t.quantity > q + 1e-9) return t;
-      held.set(key(t), q - t.quantity);
+      if (t.quantity > q + QTY_TOLERANCE) return { trade: t, held: Math.max(q, 0) };
+      held.set(key(t), Math.max(q - t.quantity, 0));
     }
   }
   return null;
+}
+
+export function findOversell<T extends Trade>(trades: T[]): T | null {
+  return oversellAt(trades)?.trade ?? null;
 }
 
 /** 여러 계좌의 같은 종목을 하나로 합친다 (전체 자산 보기용) */

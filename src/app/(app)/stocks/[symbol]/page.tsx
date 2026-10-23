@@ -28,6 +28,9 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
   const positions = allPositions.filter((p) => p.symbol === symbol).map((p) => valuePosition(p, quote, fx.rate));
   const [position] = mergeBySymbol(positions);
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
+  // 매매 추가 시 계좌는 이 종목을 가장 많이 가진 계좌로 (다 팔았으면 마지막으로 거래한 계좌)
+  const mainAccount =
+    [...positions].sort((a, b) => b.quantity - a.quantity).find((p) => p.quantity > 0)?.accountId ?? trades[0].accountId;
 
   // 가격 추이 (실패해도 나머지는 보여 준다)
   const sorted = sortTrades(trades);
@@ -63,7 +66,7 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
           }
         >
           <RenameStockButton symbol={position.symbol} name={position.name} />
-          <AddTradeButton accounts={accounts} preset={{ symbol: position.symbol, name: position.name, market: position.market }} />
+          <AddTradeButton accounts={accounts} defaultAccountId={mainAccount} preset={{ symbol: position.symbol, name: position.name, market: position.market }} />
         </PageHeader>
       </div>
       <div className="space-y-5">

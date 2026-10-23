@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePositions, summarize, valuePosition, type Trade } from "../portfolio";
+import { computePositions, oversellAt, summarize, valuePosition, type Trade } from "../portfolio";
 import { aggregate, buildDailySeries, FX_SYMBOL, type PriceSeries } from "../performance";
 
 let seq = 0;
@@ -175,5 +175,25 @@ describe("benchmarkSeries", () => {
     expect(rows.map((r) => r.mine)).toEqual([1, 1.1, 1.1 * 0.9]);
     // 1/5는 직전 값(1/2의 2000)을 기준으로, 1/7은 1/6 값을 이어 쓴다
     expect(rows.map((r) => r.kospi)).toEqual([1, 1.05, 1.05]);
+  });
+});
+
+describe("oversellAt", () => {
+  const buy = (q: number, date = "2025-09-01") => trade({ symbol: "MAGS", market: "US", type: "BUY", quantity: q, tradeDate: date });
+  const sell = (q: number, date = "2025-10-02") => trade({ symbol: "MAGS", market: "US", type: "SELL", quantity: q, tradeDate: date });
+
+  it("소수점 매수를 합친 수량만큼 전량 매도할 수 있다", () => {
+    expect(oversellAt([buy(0.351203), buy(0.412311), buy(0.352616), sell(1.11613)])).toBeNull();
+  });
+
+  it("증권사 반올림으로 0.000001주 어긋나는 것은 전량 매도로 본다", () => {
+    expect(oversellAt([buy(0.558064), buy(0.558065), sell(1.11613)])).toBeNull();
+    expect(oversellAt([buy(0.558064), buy(0.558064), sell(1.11613)])).toMatchObject({ held: 1.116128 });
+  });
+
+  it("넘치는 매도와 그 직전 보유 수량을 알려 준다", () => {
+    const r = oversellAt([buy(1), sell(0.4, "2025-09-10"), sell(1, "2025-10-02")]);
+    expect(r?.trade.tradeDate).toBe("2025-10-02");
+    expect(r?.held).toBeCloseTo(0.6);
   });
 });
