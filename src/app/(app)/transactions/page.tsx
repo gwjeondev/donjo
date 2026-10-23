@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
 import { prisma } from "@/lib/db";
-import { loadTrades } from "@/lib/data";
+import { loadPrefs, loadTrades } from "@/lib/data";
 import { requireUserId } from "@/lib/session";
 
 export const metadata = { title: "매매기록" };
@@ -20,13 +20,15 @@ export default async function TransactionsPage({
 }) {
   const params = await searchParams;
   const account = params.account;
-  const order: TradeOrder = params.sort === "old" ? "old" : "new";
   const market: MarketGroup | undefined = params.market === "kr" || params.market === "us" ? params.market : undefined;
   const userId = await requireUserId();
-  const [accounts, allTrades] = await Promise.all([
+  const [accounts, allTrades, prefs] = await Promise.all([
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
     loadTrades(userId, account),
+    loadPrefs(userId),
   ]);
+  // 주소에 정렬이 없으면 설정의 기본 정렬
+  const order: TradeOrder = params.sort === "old" || params.sort === "new" ? params.sort : prefs.trades;
   // 국내(코스피·코스닥) / 해외(미국) 구분
   const q = (params.q ?? "").trim().toLowerCase();
   const trades = allTrades
@@ -57,7 +59,7 @@ export default async function TransactionsPage({
             </div>
             <div className="flex w-full min-w-0 items-center gap-2 @3xl:w-auto @3xl:flex-1">
               <TradeSearch value={params.q ?? ""} />
-              <TradeSort value={order} />
+              <TradeSort value={order} defaultOrder={prefs.trades} />
               {allTrades.some((t) => t.market === "US") && market !== "kr" && (
                 <div className="ml-auto shrink-0">
                   <CurrencyToggle />

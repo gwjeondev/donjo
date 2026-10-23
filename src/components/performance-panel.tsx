@@ -123,7 +123,6 @@ export function PerformancePanel({
           <PerformanceView
             points={view.daily}
             startValue={view.startValue}
-            limited={range === "전체"}
             failed={failed}
           />
         </>

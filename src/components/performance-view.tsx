@@ -6,9 +6,9 @@ import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
-  { id: "day", label: "일별", limit: 60 },
-  { id: "month", label: "월별", limit: 36 },
-  { id: "year", label: "연도별", limit: Infinity },
+  { id: "day", label: "일별", limit: 60, unit: "일" },
+  { id: "month", label: "월별", limit: 36, unit: "개월" },
+  { id: "year", label: "연도별", limit: Infinity, unit: "년" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -18,21 +18,29 @@ const label = (period: string, tab: TabId) =>
 export function PerformanceView({
   points,
   startValue = 0,
-  limited = true,
   failed = false,
 }: {
   /** 조회 기간으로 자른 일별 자산 */
   points: DailyPoint[];
   /** 기간 직전 날의 평가금액 (첫 구간의 기초 금액) */
   startValue?: number;
-  /** 전체 기간일 때만 최근 N개로 줄여 보여 준다 */
-  limited?: boolean;
   failed?: boolean;
 }) {
   const [tab, setTab] = useState<TabId>("month");
-  const { limit } = TABS.find((t) => t.id === tab)!;
+  const { limit, unit } = TABS.find((t) => t.id === tab)!;
   const rows = useMemo(() => aggregate(points, tab, startValue), [points, tab, startValue]);
-  const data = limited ? rows.slice(-limit) : rows;
+  // 일별·월별은 한 번에 최대 limit개. 기본은 최근, 마지막 날(월)을 고르면 그때까지 limit개를 보여 준다
+  const [ends, setEnds] = useState<{ day?: string; month?: string }>({});
+  const first = rows[0]?.period;
+  const last = rows.at(-1)?.period;
+  const picked = tab === "year" ? undefined : ends[tab];
+  // 조회 기간이 바뀌어 고른 날짜가 범위를 벗어나면 범위 안으로 맞춘다
+  const end = picked && first && last ? (picked > last ? last : picked < first ? first : picked) : last;
+  const data = useMemo(() => {
+    const upto = end ? rows.filter((r) => r.period <= end) : rows;
+    return upto.slice(-limit);
+  }, [rows, end, limit]);
+  const capped = tab !== "year" && rows.length > limit;
 
   return (
     <div className="space-y-4">
@@ -47,6 +55,26 @@ export function PerformanceView({
           </button>
         ))}
       </div>
+
+      {capped && first && last && end && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <input
+            type={tab === "day" ? "date" : "month"}
+            aria-label={tab === "day" ? "마지막 날짜" : "마지막 달"}
+            className="input w-auto py-1.5"
+            value={end}
+            min={first}
+            max={last}
+            onChange={(e) => setEnds((s) => ({ ...s, [tab]: e.target.value || undefined }))}
+          />
+          <span className="text-ink-2">까지 최대 {limit}{unit}</span>
+          {end !== last && (
+            <button type="button" className="text-brand hover:underline" onClick={() => setEnds((s) => ({ ...s, [tab]: undefined }))}>
+              최근으로
+            </button>
+          )}
+        </div>
+      )}
 
       {data.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">

@@ -5,8 +5,8 @@ import { SortIcon } from "./icons";
 
 export type TradeOrder = "new" | "old";
 
-/** 매매기록 정렬: 최신순(기본) ↔ 오래된순. 주소의 ?sort=old 로 유지한다 */
-export function TradeSort({ value }: { value: TradeOrder }) {
+/** 매매기록 정렬: 최신순 ↔ 오래된순. 설정의 기본값과 다를 때만 주소(?sort=)에 남긴다 */
+export function TradeSort({ value, defaultOrder = "new" }: { value: TradeOrder; defaultOrder?: TradeOrder }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -16,8 +16,9 @@ export function TradeSort({ value }: { value: TradeOrder }) {
       type="button"
       onClick={() => {
         const next = new URLSearchParams(params);
-        if (old) next.delete("sort");
-        else next.set("sort", "old");
+        const target: TradeOrder = old ? "new" : "old";
+        if (target === defaultOrder) next.delete("sort");
+        else next.set("sort", target);
         router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
       }}
       title={old ? "오래된순" : "최신순"}

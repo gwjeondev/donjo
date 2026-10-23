@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
+import { DEFAULT_PREFS, HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { PositionRow } from "./position-row";
+import { SortControl } from "./sort-control";
 
 /** 오늘 등락률 (전일 종가 대비) */
 function DayChange({ p, prefix = "", inline = false }: { p: ValuedPosition; prefix?: string; inline?: boolean }) {
@@ -20,6 +23,15 @@ function DayChange({ p, prefix = "", inline = false }: { p: ValuedPosition; pref
   );
 }
 
+const HOLDING_VALUE: Record<HoldingSortKey, (p: ValuedPosition) => number | string> = {
+  value: (p) => p.valueKrw,
+  returnRate: (p) => p.returnRate,
+  pnl: (p) => p.unrealizedPnlKrw,
+  realized: (p) => p.realizedPnlKrw,
+  dayChange: (p) => (p.price != null && p.previousClose ? p.price / p.previousClose - 1 : 0),
+  name: (p) => p.name,
+};
+
 const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
 const signed = (n: number, c: "KRW" | "USD") => `${n > 0 ? "+" : n < 0 ? "-" : ""}${fmtPrice(Math.abs(n), c)}`;
 
@@ -28,22 +40,34 @@ export function Holdings({
   positions,
   totalValue,
   usdKrw,
+  sort: initialSort = DEFAULT_PREFS.holdings,
 }: {
   title?: string;
   positions: ValuedPosition[];
   totalValue: number;
   usdKrw: number;
+  /** 설정에서 정한 기본 정렬. 여기서 바꾼 정렬은 이 화면에서만 쓴다 */
+  sort?: Sort<HoldingSortKey>;
 }) {
   const { currency } = useDisplayCurrency();
-  const held = positions.filter((p) => p.quantity > 0).sort((a, b) => b.valueKrw - a.valueKrw);
+  const [sort, setSort] = useState(initialSort);
+  const held = sortBy(
+    positions.filter((p) => p.quantity > 0),
+    (p) => HOLDING_VALUE[sort.key](p),
+    sort.dir,
+  );
   const hasUs = held.some((p) => p.currency === "USD");
   const rows = held.map((p) => ({ p, d: displayFigures(p, currency, usdKrw) }));
 
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="font-semibold">{title}</h2>
-        {hasUs && <CurrencyToggle />}
+      {/* 좁으면 정렬·통화 버튼이 다음 줄로 내려간다 */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="shrink-0 font-semibold">{title}</h2>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {held.length > 1 && <SortControl options={HOLDING_SORTS} value={sort} onChange={setSort} />}
+          {hasUs && <CurrencyToggle />}
+        </div>
       </div>
       {held.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">보유 중인 종목이 없어요. 매수 기록을 추가해 보세요.</p>

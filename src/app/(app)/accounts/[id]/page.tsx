@@ -7,13 +7,16 @@ import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
-import { loadPortfolio } from "@/lib/data";
+import { loadPortfolio, loadPrefs } from "@/lib/data";
 import { requireUserId } from "@/lib/session";
 
 export default async function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const { accounts, trades, positions, summary, fx } = await loadPortfolio(userId, id);
+  const [{ accounts, trades, positions, summary, fx }, prefs] = await Promise.all([
+    loadPortfolio(userId, id),
+    loadPrefs(userId),
+  ]);
   const account = accounts.find((a) => a.id === id);
   if (!account) notFound();
 
@@ -28,7 +31,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       </div>
       <div className="space-y-5">
         <SummaryCards summary={summary} />
-        <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} />
+        <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} sort={prefs.holdings} />
         <section>
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="shrink-0 whitespace-nowrap font-semibold">매매 기록</h2>
@@ -37,7 +40,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
               {trades.some((t) => t.market === "US") && <CurrencyToggle />}
             </div>
           </div>
-          <TradeList trades={trades} accounts={accounts} showAccount={false} />
+          <TradeList trades={prefs.trades === "old" ? [...trades].reverse() : trades} accounts={accounts} showAccount={false} />
         </section>
       </div>
     </>

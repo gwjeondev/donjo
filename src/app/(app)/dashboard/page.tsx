@@ -5,7 +5,7 @@ import { Holdings } from "@/components/holdings";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
 import { Welcome } from "@/components/welcome";
-import { loadPerformance, loadPortfolio } from "@/lib/data";
+import { loadPerformance, loadPortfolio, loadPrefs } from "@/lib/data";
 import { cumulative } from "@/lib/performance";
 import { mergeBySymbol } from "@/lib/portfolio";
 import { localizeStockNames } from "@/lib/market/service";
@@ -17,9 +17,10 @@ export default async function DashboardPage() {
   const userId = await requireUserId();
   // 영문 이름으로 저장된 국내 종목은 증권사 표기 한글 이름으로 바꾼다 (실패해도 화면은 그대로 보여 준다)
   await localizeStockNames(userId).catch((e) => console.error("[names] 한글 이름 변환 실패:", e));
-  const [{ accounts, trades, positions, summary, fx, quotedAt }, perf] = await Promise.all([
+  const [{ accounts, trades, positions, summary, fx, quotedAt }, perf, prefs] = await Promise.all([
     loadPortfolio(userId),
     loadPerformance(userId),
+    loadPrefs(userId),
   ]);
   const held = positions.filter((p) => p.quantity > 0);
   const merged = mergeBySymbol(held);
@@ -69,7 +70,7 @@ export default async function DashboardPage() {
               ]}
             />
           </div>
-          <Holdings positions={merged} totalValue={summary.valueKrw} usdKrw={fx.rate} />
+          <Holdings positions={merged} totalValue={summary.valueKrw} usdKrw={fx.rate} sort={prefs.holdings} />
         </div>
       )}
     </>

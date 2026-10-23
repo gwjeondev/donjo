@@ -2,12 +2,19 @@
 import "server-only";
 import type { Transaction } from "@prisma/client";
 import { prisma } from "./db";
+import { readPrefs } from "./prefs";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
 import { benchmarkSeries, buildDailySeries, type DailyPoint } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
 const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC", nasdaq100: "^NDX" } as const;
 import { computePositions, summarize, valuePosition, type Trade } from "./portfolio";
+
+/** 사용자 화면 설정 (없거나 형식이 틀리면 기본값) */
+export async function loadPrefs(userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { prefs: true } });
+  return readPrefs(u?.prefs);
+}
 
 export function toTrade(t: Transaction): Trade {
   return {

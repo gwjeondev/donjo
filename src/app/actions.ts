@@ -14,6 +14,7 @@ import { orderImportRows } from "@/lib/import-order";
 import { addDays } from "@/lib/performance";
 import { FX_SYMBOL } from "@/lib/performance";
 import { fmtQty } from "@/lib/format";
+import { readPrefs, type Prefs } from "@/lib/prefs";
 import { computePositions, findOversell, oversellAt, quantityAt, sortTrades, type Trade } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/session";
@@ -388,6 +389,13 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
 }
 
 // ---------- 계정 설정 ----------
+
+/** 목록 정렬 등 화면 설정 저장 (설정 화면에서 바꿀 때마다 호출) */
+export async function savePrefs(next: Prefs): Promise<FormState> {
+  const userId = await requireUserId();
+  await prisma.user.update({ where: { id: userId }, data: { prefs: JSON.parse(JSON.stringify(readPrefs(next))) } });
+  return { ok: true };
+}
 
 export async function updateProfile(_: FormState, form: FormData): Promise<FormState> {
   const userId = await requireUserId();

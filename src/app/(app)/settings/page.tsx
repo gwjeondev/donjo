@@ -2,8 +2,10 @@ import { ExportButton } from "@/components/csv-actions";
 import { LocalizeNamesButton } from "@/components/localize-names";
 import { PageHeader } from "@/components/page-header";
 import { PasswordForm, ProfileForm } from "@/components/settings-forms";
+import { SortSettings } from "@/components/sort-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { prisma } from "@/lib/db";
+import { readPrefs } from "@/lib/prefs";
 import { requireUserId } from "@/lib/session";
 import { logout } from "@/app/actions";
 import { LogoutIcon } from "@/components/icons";
@@ -22,7 +24,7 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
 
 export default async function SettingsPage() {
   const userId = await requireUserId();
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true } });
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true, prefs: true } });
   return (
     // 읽기 좋은 폭으로 줄이되, 화면(및 맨 아래 바로가기) 기준 가운데에 둔다
     <div className="mx-auto max-w-2xl">
@@ -38,6 +40,12 @@ export default async function SettingsPage() {
           <div className="max-w-xs">
             <ThemeToggle full />
           </div>
+        </Section>
+        <Section
+          title="목록 정렬"
+          desc="각 목록의 기본 정렬 순서예요. 목록 위의 정렬 버튼으로 잠깐 바꿔 볼 수도 있어요(그 화면에서만 적용)."
+        >
+          <SortSettings initial={readPrefs(user.prefs)} />
         </Section>
         <Section
           title="종목 이름"
