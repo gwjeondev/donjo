@@ -152,7 +152,7 @@ function TradeForm({
         </div>
       )}
 
-      <div className="grid grid-cols-[110px_1fr] gap-3">
+      <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3">
         <div>
           <label className="label" htmlFor="market">시장</label>
           <select id="market" name="market" className="input" value={market} onChange={(e) => setMarket(e.target.value as Market)}>

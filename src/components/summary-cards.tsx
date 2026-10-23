@@ -3,7 +3,7 @@ import type { Summary } from "@/lib/portfolio";
 
 export function SummaryCards({ summary }: { summary: Summary }) {
   return (
-    <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr]">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="card p-5">
         <p className="text-sm text-ink-2">총 평가금액</p>
         <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw)}</p>

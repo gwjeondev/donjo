@@ -46,7 +46,7 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
       {total === 0 ? (
         <p className="py-12 text-center text-sm text-muted">데이터가 없습니다</p>
       ) : (
-        <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
+        <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
           <div className="mx-auto h-44 w-44">
             <ResponsiveContainer>
               <PieChart>

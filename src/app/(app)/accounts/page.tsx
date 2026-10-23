@@ -19,7 +19,7 @@ export default async function AccountsPage() {
         <AccountButton />
       </PageHeader>
       {accounts.length === 0 && <p className="card p-8 text-center text-sm text-muted">계좌를 추가해 주세요.</p>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {accounts.map((a) => {
           const ps = positions.filter((p) => p.accountId === a.id);
           const s = summarize(ps);
