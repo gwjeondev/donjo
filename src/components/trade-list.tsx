@@ -39,7 +39,7 @@ const amountKrw = (t: Trade) => {
 
 function TypeBadge({ type }: { type: Trade["type"] }) {
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${type === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
+    <span className={`shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold ${type === "BUY" ? "bg-up/10 text-up" : "bg-down/10 text-down"}`}>
       {type === "BUY" ? "매수" : "매도"}
     </span>
   );
@@ -53,7 +53,7 @@ export function TradeList({ trades, accounts, showAccount = true }: { trades: Tr
   return (
     <div className="card overflow-hidden">
       <table className="hidden w-full text-sm md:table">
-        <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
+        <thead className="whitespace-nowrap border-b border-line bg-surface-2 text-xs text-ink-2">
           <tr>
             <th className="px-4 py-2.5 text-left font-medium">거래일</th>
             {showAccount && <th className="px-4 py-2.5 text-left font-medium">계좌</th>}
@@ -97,19 +97,26 @@ export function TradeList({ trades, accounts, showAccount = true }: { trades: Tr
 
       <ul className="divide-y divide-line md:hidden">
         {trades.map((t) => (
-          <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+          <li key={t.id} className="flex items-center gap-2 py-3 pl-4 pr-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <TypeBadge type={t.type} />
-                <span className="truncate font-medium">{t.name}</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <TypeBadge type={t.type} />
+                  <span className="truncate font-medium">{t.name}</span>
+                </div>
+                <span className="shrink-0 whitespace-nowrap text-sm font-medium">{fmtKrw(amountKrw(t))}</span>
               </div>
-              <div className="mt-0.5 text-xs text-muted">
-                {t.tradeDate}
-                {showAccount && ` · ${accountName.get(t.accountId)}`} · {fmtQty(t.quantity)}주 × {fmtPrice(t.price, currencyOf(t.market))}
+              <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted">
+                <span className="truncate">
+                  {t.tradeDate}
+                  {showAccount && ` · ${accountName.get(t.accountId)}`}
+                </span>
+                <span className="shrink-0 whitespace-nowrap">
+                  {fmtQty(t.quantity)}주 × {fmtPrice(t.price, currencyOf(t.market))}
+                </span>
               </div>
             </div>
-            <div className="text-right text-sm font-medium">{fmtKrw(amountKrw(t))}</div>
-            <div className="flex">
+            <div className="flex shrink-0 flex-col">
               <EditTradeButton accounts={accounts} trade={t} />
               <DeleteButton id={t.id} />
             </div>

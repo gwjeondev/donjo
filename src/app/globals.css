@@ -101,14 +101,14 @@ body {
   @apply mb-1 block text-xs font-medium text-ink-2;
 }
 .btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50;
+  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50;
 }
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 bg-brand text-white hover:opacity-90;
+  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 bg-brand text-white hover:opacity-90;
 }
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 border border-line bg-surface text-ink hover:bg-surface-2;
+  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 border border-line bg-surface text-ink hover:bg-surface-2;
 }
 .btn-danger {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 text-up hover:bg-up/10;
+  @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 text-up hover:bg-up/10;
 }

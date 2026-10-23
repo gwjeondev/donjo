@@ -10,7 +10,7 @@ export function Holdings({ positions, totalValue }: { positions: ValuedPosition[
     <div className="card overflow-hidden">
       {/* PC: 표 */}
       <table className="hidden w-full text-sm md:table">
-        <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
+        <thead className="whitespace-nowrap border-b border-line bg-surface-2 text-xs text-ink-2">
           <tr>
             <th className="px-4 py-2.5 text-left font-medium">종목</th>
             <th className="px-4 py-2.5 text-right font-medium">보유수량</th>

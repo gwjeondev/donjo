@@ -85,9 +85,9 @@ export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) 
             </div>
           </div>
 
-          <div className="card overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
+          <div className="card overflow-hidden">
+            <table className="hidden w-full text-sm md:table">
+              <thead className="whitespace-nowrap border-b border-line bg-surface-2 text-xs text-ink-2">
                 <tr>
                   <th className="px-4 py-2.5 text-left font-medium">기간</th>
                   <th className="px-4 py-2.5 text-right font-medium">기초 평가금액</th>
@@ -114,6 +114,29 @@ export function PerformanceView({ rows }: { rows: Record<TabId, PeriodRow[]> }) 
                 ))}
               </tbody>
             </table>
+
+            <ul className="divide-y divide-line md:hidden">
+              {[...data].reverse().map((r) => (
+                <li key={r.period} className="px-4 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium">{r.period}</span>
+                    <span className={`whitespace-nowrap text-base font-semibold ${tone(r.returnRate)}`}>{fmtPct(r.returnRate)}</span>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <dt className="text-muted">손익</dt>
+                    <dd className={`text-right ${tone(r.pnl)}`}>{fmtSigned(r.pnl)}</dd>
+                    <dt className="text-muted">기말 평가금액</dt>
+                    <dd className="text-right">{fmtKrw(r.endValue)}</dd>
+                    <dt className="text-muted">기초 평가금액</dt>
+                    <dd className="text-right text-ink-2">{fmtKrw(r.startValue)}</dd>
+                    <dt className="text-muted">순투입</dt>
+                    <dd className="text-right text-ink-2">{fmtSigned(r.netFlow)}</dd>
+                    <dt className="text-muted">자산 증가율</dt>
+                    <dd className={`text-right ${tone(r.valueChangeRate)}`}>{r.startValue > 0 ? fmtPct(r.valueChangeRate) : "-"}</dd>
+                  </dl>
+                </li>
+              ))}
+            </ul>
           </div>
           <p className="text-xs leading-relaxed text-muted">
             <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
