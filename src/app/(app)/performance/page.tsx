@@ -23,7 +23,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         toolbar={<AccountFilter accounts={accounts} value={account} />}
       />
       <div className="space-y-4">
-        <BenchmarkChart points={perf.benchmark} />
+        <BenchmarkChart points={perf.benchmark} missing={perf.benchmarkMissing} failed={perf.failed} />
         <PerformanceView rows={{ day: perf.day, month: perf.month, year: perf.year }} failed={perf.failed} />
       </div>
     </>

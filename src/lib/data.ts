@@ -57,13 +57,13 @@ export async function loadPerformance(userId: string, accountId?: string) {
     return { ...(await computePerformance(userId, accountId)), failed: false };
   } catch (e) {
     console.error("[performance] 계산 실패:", e);
-    return { daily: [], benchmark: [], day: [], month: [], year: [], failed: true };
+    return { daily: [], benchmark: [], benchmarkMissing: [], day: [], month: [], year: [], failed: true };
   }
 }
 
 async function computePerformance(userId: string, accountId?: string) {
   const trades = await loadTrades(userId, accountId);
-  if (trades.length === 0) return { daily: [], benchmark: [], day: [], month: [], year: [] };
+  if (trades.length === 0) return { daily: [], benchmark: [], benchmarkMissing: [], day: [], month: [], year: [] };
   const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
   const prices = await getPriceSeries([...trades.map((t) => t.symbol), ...Object.values(BENCHMARKS)], from);
   const today = todayStr();
@@ -78,9 +78,14 @@ async function computePerformance(userId: string, accountId?: string) {
     daily,
     Object.fromEntries(Object.entries(BENCHMARKS).map(([k, sym]) => [k, prices.get(sym) ?? new Map<string, number>()])),
   );
+  // 지수 시세를 못 받은 경우 0% 평평한 선 대신 "불러오지 못함"으로 보여 주기 위해
+  const benchmarkMissing = Object.entries(BENCHMARKS)
+    .filter(([, sym]) => !(prices.get(sym)?.size))
+    .map(([k]) => k);
   return {
     daily,
     benchmark,
+    benchmarkMissing,
     day: aggregate(daily, "day"),
     month: aggregate(daily, "month"),
     year: aggregate(daily, "year"),

@@ -19,7 +19,16 @@ const RANGES = [
 ] as const;
 
 /** 같은 기간 내 수익률(입출금 제외)과 시장 지수 비교. 선택한 기간의 시작을 0%로 맞춘다 */
-export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
+export function BenchmarkChart({
+  points,
+  missing = [],
+  failed = false,
+}: {
+  points: BenchmarkPoint[];
+  /** 시세를 불러오지 못한 지수 (예: ["kospi"]) */
+  missing?: string[];
+  failed?: boolean;
+}) {
   const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("전체");
   const data = useMemo(() => {
     if (points.length === 0) return [];
@@ -35,7 +44,22 @@ export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
     });
   }, [points, range]);
 
-  if (points.length < 2) return null;
+  const series = SERIES.filter((s) => !missing.includes(s.key));
+
+  if (points.length < 2) {
+    return (
+      <div className="card p-5">
+        <h2 className="font-semibold">시장 대비 수익률</h2>
+        <p className="mt-3 text-sm text-ink-2">
+          {failed
+            ? "수익률을 불러오지 못했습니다. 잠시 후 새로고침해 주세요."
+            : points.length === 0
+              ? "매매 기록이 생기면 코스피·S&P 500과 비교해 보여 드려요."
+              : "비교하려면 이틀 이상의 기록이 필요해요. 매매 기록의 거래일이 모두 같은 날이라면, 실제로 매수한 날짜로 고쳐 주세요. 그날부터 지금까지의 수익률을 시장과 비교해 드려요."}
+        </p>
+      </div>
+    );
+  }
   const last = data.at(-1)!;
 
   return (
@@ -59,7 +83,7 @@ export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
       </div>
       {/* 범례 겸 기간 수익률 (색만으로 구분하지 않도록 이름과 값을 함께) */}
       <ul className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-        {SERIES.map((s) => (
+        {series.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="h-0.5 w-4 rounded" style={{ background: s.color, height: s.width }} />
             <span className="text-ink-2">{s.label}</span>
@@ -67,6 +91,11 @@ export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
           </li>
         ))}
       </ul>
+      {missing.length > 0 && (
+        <p className="mb-2 text-xs text-muted">
+          {SERIES.filter((s) => missing.includes(s.key)).map((s) => s.label).join(", ")} 시세를 불러오지 못해 제외했어요.
+        </p>
+      )}
       <div className="h-60">
         <ResponsiveContainer>
           <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -95,7 +124,7 @@ export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
                 return (
                   <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-sm">
                     <div className="text-muted">{String(p.date)}</div>
-                    {SERIES.map((s) => (
+                    {series.map((s) => (
                       <div key={s.key} className="mt-0.5 flex items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <span className="size-2 rounded-full" style={{ background: s.color }} />
@@ -108,7 +137,7 @@ export function BenchmarkChart({ points }: { points: BenchmarkPoint[] }) {
                 );
               }}
             />
-            {SERIES.map((s) => (
+            {series.map((s) => (
               <Line
                 key={s.key}
                 type="monotone"
