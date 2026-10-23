@@ -16,9 +16,11 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   ]);
   return (
     <>
-      <PageHeader title="수익률" sub="일별 · 월별 · 연도별 자산 증가율">
-        <AccountFilter accounts={accounts} value={account} />
-      </PageHeader>
+      <PageHeader
+        title="수익률"
+        sub="일별 · 월별 · 연도별 자산 증가율"
+        toolbar={<AccountFilter accounts={accounts} value={account} />}
+      />
       <PerformanceView rows={{ day: perf.day, month: perf.month, year: perf.year }} failed={perf.failed} />
     </>
   );

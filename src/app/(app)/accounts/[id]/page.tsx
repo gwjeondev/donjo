@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccountButton } from "@/components/account-form";
 import { CurrencyToggle } from "@/components/currency";
-import { DeleteAccountButton } from "@/components/delete-account";
 import { Holdings } from "@/components/holdings";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/summary-cards";
@@ -23,7 +22,6 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
       <Link href="/accounts" className="text-sm text-ink-2 hover:text-ink">← 계좌 목록</Link>
       <div className="mt-2">
         <PageHeader title={account.name} sub={[account.broker, account.memo].filter(Boolean).join(" · ") || undefined}>
-          <DeleteAccountButton id={account.id} name={account.name} />
           <AccountButton initial={account} />
           <AddTradeButton accounts={accounts} defaultAccountId={account.id} />
         </PageHeader>

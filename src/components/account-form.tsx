@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormAction } from "@/lib/hooks/use-form-action";
 import { saveAccount } from "@/app/actions";
 import { EditIcon, PlusIcon } from "./icons";
+import { DeleteAccountButton } from "./delete-account";
 import { Dialog } from "./trade-form";
 
 interface Account {
@@ -35,6 +36,12 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
       </div>
       {state.error && <p className="text-sm text-up">{state.error}</p>}
       <button className="btn-primary w-full" disabled={pending}>{pending ? "저장 중…" : "저장"}</button>
+      {initial && (
+        <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="text-xs text-muted">계좌를 지우면 모든 매매 기록도 함께 삭제됩니다.</p>
+          <DeleteAccountButton id={initial.id} name={initial.name} />
+        </div>
+      )}
     </form>
   );
 }

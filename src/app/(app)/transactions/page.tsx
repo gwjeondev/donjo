@@ -18,9 +18,16 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   ]);
   return (
     <>
-      <PageHeader title="매매기록" sub={`총 ${trades.length}건`}>
-        {trades.some((t) => t.market === "US") && <CurrencyToggle />}
-        <AccountFilter accounts={accounts} value={account} />
+      <PageHeader
+        title="매매기록"
+        sub={`총 ${trades.length}건`}
+        toolbar={
+          <>
+            <AccountFilter accounts={accounts} value={account} />
+            {trades.some((t) => t.market === "US") && <CurrencyToggle />}
+          </>
+        }
+      >
         <AddTradeButton accounts={accounts} defaultAccountId={account} label="추가" />
       </PageHeader>
       <TradeList trades={trades} accounts={accounts} showAccount={!account} />

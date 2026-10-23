@@ -8,7 +8,7 @@ export function AccountFilter({ accounts, value }: { accounts: { id: string; nam
   const params = useSearchParams();
   return (
     <select
-      className="input w-auto min-w-36"
+      className="input w-auto min-w-0 max-w-[60%] sm:min-w-44 sm:max-w-xs"
       value={value ?? ""}
       aria-label="계좌 선택"
       onChange={(e) => {
