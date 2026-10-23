@@ -17,10 +17,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="md:flex">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface p-4 md:flex">
-        <div className="mb-6 flex items-center gap-2 px-2">
+        <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-2" aria-label="대시보드로">
           <img src="/icons/icon-192.png" alt="" className="size-8 rounded-lg" />
           <span className="text-lg font-bold">돈조</span>
-        </div>
+        </Link>
         <SideNav />
         <div className="mt-auto border-t border-line pt-4">
           <div className="mb-3"><ThemeToggle full /></div>
@@ -37,10 +37,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
       <div className="min-w-0 flex-1 overflow-x-clip">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-bg/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur md:hidden">
-          <div className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2" aria-label="대시보드로">
             <img src="/icons/icon-192.png" alt="" className="size-7 rounded-lg" />
             <span className="font-bold">돈조</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Link href="/settings" className="p-1 text-ink-2" aria-label="설정" title="설정">
