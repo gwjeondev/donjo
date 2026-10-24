@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AddDividendButton, DeleteDividendButton, EditDividendButton, type DividendStock } from "@/components/dividend-form";
+import { AddDividendButton, type DividendStock } from "@/components/dividend-form";
+import { DividendList, RealizedList, TaxSaleList } from "@/components/income-lists";
 import { FilterRow, StatCard } from "@/components/filter-row";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
 import { PageHeader } from "@/components/page-header";
@@ -7,7 +8,7 @@ import { QuerySelect, QueryTabs } from "@/components/query-select";
 import { RangeFilter } from "@/components/range-bar";
 import { loadDividends, loadTrades } from "@/lib/data";
 import { prisma } from "@/lib/db";
-import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
+import { fmtKrw, fmtSigned, tone } from "@/lib/format";
 import { dividendNetKrw, incomeByYear, realizedEvents } from "@/lib/income";
 import { todayStr } from "@/lib/market/service";
 import type { Market } from "@/lib/portfolio";
@@ -17,8 +18,6 @@ import { OVERSEAS_DEDUCTION, overseasSales, overseasTax } from "@/lib/tax";
 
 export const metadata = { title: "손익" };
 
-const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
-const code = (symbol: string) => symbol.replace(/\.(KS|KQ)$/, "");
 const dot = (d: string) => d.replaceAll("-", ".");
 const inMarket = (m: Market, g?: MarketGroup) => !g || (g === "us" ? m === "US" : m !== "US");
 
@@ -203,58 +202,12 @@ function IncomeView({
           events.length === 0 ? (
             <p className="card p-8 text-center text-sm text-muted">이 기간에는 매도 기록이 없어요.</p>
           ) : (
-            <ul className="card divide-y divide-line overflow-hidden">
-              {events.map((e) => (
-                <SaleItem
-                  key={e.tradeId}
-                  name={e.name}
-                  href={stockHref(e.symbol)}
-                  meta={`${e.date} · ${account ? "" : `${accountName.get(e.accountId)} · `}${fmtQty(e.quantity)}주`}
-                  result={
-                    <>
-                      <p className={`font-semibold ${tone(e.pnlKrw)}`}>{fmtSigned(e.pnlKrw)}</p>
-                      <p className={`text-xs ${tone(e.returnRate)}`}>{fmtPct(e.returnRate)}</p>
-                    </>
-                  }
-                  figures={[
-                    ["매도가", fmtPrice(e.price, e.currency)],
-                    ["평단가", fmtPrice(e.avgCost, e.currency)],
-                  ]}
-                />
-              ))}
-            </ul>
+            <RealizedList events={events} accountName={accountName} showAccount={!account} />
           )
         ) : dividends.length === 0 ? (
           <p className="card p-8 text-center text-sm text-muted">이 기간에 받은 배당금이 없어요. 오른쪽 위 ‘배당’으로 추가해 보세요.</p>
         ) : (
-          <ul className="card divide-y divide-line overflow-hidden">
-            {dividends.map((d) => {
-              const currency = d.market === "US" ? "USD" : "KRW";
-              return (
-                <li key={d.id} className="flex items-start justify-between gap-2 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link href={stockHref(d.symbol)} className="block truncate font-medium hover:text-brand hover:underline" title={d.name}>
-                      {d.name}
-                    </Link>
-                    <p className="truncate text-xs text-muted">
-                      {d.payDate} · {account ? "" : `${accountName.get(d.accountId)} · `}
-                      세전 {fmtPrice(d.amount, currency)}
-                      {d.tax ? ` · 세금 ${fmtPrice(d.tax, currency)}` : ""}
-                      {d.memo ? ` · ${d.memo}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-start gap-1">
-                    <div className="text-right">
-                      <p className="font-semibold text-up">+{fmtKrw(dividendNetKrw(d))}</p>
-                      <p className="text-xs text-muted">{code(d.symbol)}</p>
-                    </div>
-                    <EditDividendButton accounts={accounts} stocks={stocks} dividend={d} />
-                    <DeleteDividendButton id={d.id} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <DividendList dividends={dividends} accountName={accountName} showAccount={!account} accounts={accounts} stocks={stocks} />
         )}
         <p className="text-xs leading-relaxed text-muted">
           실현손익 = 매도 대금(수수료·세금 뺀 금액) − 판 수량의 평균 매입금액. 해외 주식은 매도일 환율과 매수일 환율로 원화 환산해요. 배당금은 세후
@@ -332,21 +285,7 @@ function TaxView({
         {sales.length === 0 ? (
           <p className="card p-8 text-center text-sm text-muted">{year}년에는 해외 주식을 판 기록이 없어요.</p>
         ) : (
-          <ul className="card divide-y divide-line overflow-hidden">
-            {sales.map((s) => (
-              <SaleItem
-                key={s.tradeId}
-                name={s.name}
-                href={stockHref(s.symbol)}
-                meta={`${s.date} · ${account ? "" : `${accountName.get(s.accountId)} · `}${fmtQty(s.quantity)}주`}
-                result={<p className={`font-semibold ${tone(s.gainKrw)}`}>{fmtSigned(s.gainKrw)}</p>}
-                figures={[
-                  ["양도가액", fmtKrw(s.proceedsKrw)],
-                  ["취득가액", fmtKrw(s.costKrw)],
-                ]}
-              />
-            ))}
-          </ul>
+          <TaxSaleList sales={sales} accountName={accountName} showAccount={!account} />
         )}
         <div className="space-y-1 text-xs leading-relaxed text-muted">
           <p>
@@ -367,42 +306,3 @@ function TaxView({
   );
 }
 
-/**
- * 매도 한 건: 1줄 종목명 + 손익, 2줄 날짜·계좌·수량, 그 아래 칸을 나눈 금액 두 개.
- * 한 줄에 다 넣으면 좁은 화면에서 금액이 잘려서 나눠 보여 준다.
- */
-function SaleItem({
-  name,
-  href,
-  meta,
-  result,
-  figures,
-}: {
-  name: string;
-  href: string;
-  meta: string;
-  result: React.ReactNode;
-  figures: [string, string][];
-}) {
-  return (
-    <li className="px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link href={href} className="block truncate font-medium hover:text-brand hover:underline" title={name}>
-            {name}
-          </Link>
-          <p className="truncate text-xs text-muted">{meta}</p>
-        </div>
-        <div className="shrink-0 text-right">{result}</div>
-      </div>
-      <dl className="mt-2 grid grid-cols-2 divide-x divide-line rounded-lg bg-surface-2 text-xs">
-        {figures.map(([label, value]) => (
-          <div key={label} className="min-w-0 px-3 py-2">
-            <dt className="text-muted">{label}</dt>
-            <dd className="mt-0.5 truncate font-medium text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </li>
-  );
-}

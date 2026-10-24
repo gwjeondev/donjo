@@ -13,6 +13,7 @@ export function PositionRow({
   pnl,
   rate,
   toneClass,
+  valueClass = "",
 }: {
   title: React.ReactNode;
   info: React.ReactNode;
@@ -21,11 +22,13 @@ export function PositionRow({
   pnl: string;
   rate: string;
   toneClass: string;
+  /** 오른쪽 첫 줄(금액) 색 — 손익이 주인공인 목록에서 */
+  valueClass?: string;
 }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5">
       <div className="truncate font-medium">{title}</div>
-      <div className="whitespace-nowrap text-right font-medium">{value}</div>
+      <div className={`whitespace-nowrap text-right font-medium ${valueClass}`}>{value}</div>
       <div className="text-xs text-muted" data-wrap="ok">
         {info}
       </div>
