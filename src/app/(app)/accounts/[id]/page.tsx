@@ -21,7 +21,6 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <Link href="/accounts" className="text-sm text-ink-2 hover:text-ink">← 계좌 목록</Link>
       <div className="mt-2">
         <PageHeader title={account.name} sub={[account.broker, account.memo].filter(Boolean).join(" · ") || undefined}>
           <AccountButton initial={account} />

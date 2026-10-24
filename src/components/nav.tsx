@@ -21,6 +21,7 @@ export function SideNav() {
         const active = path.startsWith(href);
         return (
           <Link
+            data-nav-root
             key={href}
             href={href}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -45,6 +46,7 @@ export function BottomNav() {
           const active = path.startsWith(href);
           return (
             <Link
+              data-nav-root
               key={href}
               href={href}
               className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${active ? "text-brand" : "text-muted"}`}
