@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { fmtKrw, fmtKrwShort, fmtPct, tone } from "@/lib/format";
+import { fmtKrw, fmtKrwShort, fmtSigned, tone } from "@/lib/format";
 import { rangeBounds, sliceRange, type RangeId } from "@/lib/range";
 
 interface Point {
@@ -15,7 +15,7 @@ interface Point {
 const RANGES = ["1M", "3M", "YTD", "1Y", "전체"] as const satisfies readonly RangeId[];
 
 /**
- * 자산 추이: 금액은 입출금까지 반영한 총자산(주식 + 현금), 기간 수익률은 입출금을 뺀 투자 성과.
+ * 자산 추이: 입출금까지 반영한 총자산(주식 + 현금)과 기간 중 증감. 투자 수익률은 수익률 화면에서 본다.
  */
 export function AssetChart({ points, failed = false, withCash = false }: { points: Point[]; failed?: boolean; withCash?: boolean }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("3M");
@@ -27,8 +27,8 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
   }, [points, range]);
 
   const last = data.at(-1);
-  // 수익률 화면과 같게 기간 직전 날을 기준으로 잡는다
-  const periodReturn = base && last && 1 + base.cum > 0 ? (1 + last.cum) / (1 + base.cum) - 1 : 0;
+  // 기간 직전 날 대비 총자산 증감 (입출금 포함: 그래프 선과 같은 값)
+  const change = base && last ? last.value - base.value : 0;
 
   return (
     <div className="card flex flex-col p-5">
@@ -39,8 +39,7 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
           </h2>
           {last && (
             <p className="mt-0.5 text-xs text-ink-2">
-              기간 수익률 <span className={`font-semibold ${tone(periodReturn)}`}>{fmtPct(periodReturn)}</span>
-              <span className="text-muted"> (입출금 제외)</span>
+              기간 변화 <span className={`font-semibold ${tone(change)}`}>{fmtSigned(change)}</span>
             </p>
           )}
         </div>
@@ -99,7 +98,6 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
                         {withCash ? "총자산 " : "평가금액 "}
                         {fmtKrw(p.value)}
                       </div>
-                      <div className={tone(p.cum)}>누적 {fmtPct(p.cum)}</div>
                     </div>
                   );
                 }}
