@@ -23,18 +23,18 @@ describe("현금 잔고", () => {
     expect(cashBalances(flows, trades, divs, "manual").get("a")).toEqual({ krw: 2_900_000, usd: 0 });
   });
 
-  it("자동 반영: 미국 주식은 달러가 없으면 원화에서 바로, 판 돈과 배당은 달러로", () => {
+  it("자동 반영: 국내 주식은 원화, 미국 주식은 달러로만 사고판다 (달러가 모자라면 마이너스)", () => {
     const b = cashBalances(flows, trades, divs, "linked").get("a")!;
-    expect(b.krw).toBeCloseTo(3_000_000 - 700_100 - 1000 * 1400 - 100_000);
-    expect(b.usd).toBeCloseTo(419 + 0.85);
+    expect(b.krw).toBeCloseTo(3_000_000 - 700_100 - 100_000);
+    expect(b.usd).toBeCloseTo(-1000 + 419 + 0.85);
   });
 
-  it("달러가 있으면 달러부터 쓰고 모자란 만큼만 원화에서", () => {
-    const f = [flow({ amount: 1_000_000 }), flow({ type: "EXCHANGE", amount: 140_000, fxRate: 1400 })];
+  it("환전한 달러로 미국 주식을 산다", () => {
+    const f = [flow({ amount: 1_000_000 }), flow({ type: "EXCHANGE", amount: 280_000, fxRate: 1400 })];
     const t = [trade({ symbol: "AAPL", market: "US", quantity: 1, price: 150, fxRate: 1400 })];
     const b = cashBalances(f, t, [], "linked").get("a")!;
-    expect(b.usd).toBeCloseTo(0);
-    expect(b.krw).toBeCloseTo(1_000_000 - 140_000 - 50 * 1400);
+    expect(b.usd).toBeCloseTo(50);
+    expect(b.krw).toBeCloseTo(720_000);
   });
 
   it("날짜별 잔고", () => {

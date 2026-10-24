@@ -1,8 +1,7 @@
 // 계좌 현금(원화·달러) 잔고. 입금·출금·환전 기록으로 계산하고,
 // '자동 반영'(linked)이면 매수·매도·배당도 현금에 반영한다.
 //  - 국내 주식: 원화에서 사고 원화로 받는다
-//  - 미국 주식: 달러가 있으면 달러에서 먼저 빼고, 모자라면 그날 환율로 원화에서 뺀다(통합증거금처럼).
-//    판 돈과 배당은 달러로 들어온다
+//  - 미국 주식: 달러로만 사고 달러로 받는다 (달러는 입금·환전으로 직접 넣는다. 모자라면 달러가 마이너스)
 import { currencyOf, sortTrades, type Trade } from "./portfolio";
 import type { Dividend } from "./income";
 
@@ -53,14 +52,7 @@ function applyTrade(b: CashBalance, t: Trade) {
     b.krw += t.type === "BUY" ? -(gross + t.fee + t.tax) : gross - t.fee - t.tax;
     return;
   }
-  if (t.type === "SELL") {
-    b.usd += gross - t.fee - t.tax;
-    return;
-  }
-  const cost = gross + t.fee + t.tax;
-  const fromUsd = Math.min(Math.max(b.usd, 0), cost);
-  b.usd -= fromUsd;
-  b.krw -= (cost - fromUsd) * t.fxRate;
+  b.usd += t.type === "BUY" ? -(gross + t.fee + t.tax) : gross - t.fee - t.tax;
 }
 
 type Event = { date: string; order: number; created: string; run: (b: CashBalance) => void; accountId: string };
