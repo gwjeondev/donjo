@@ -205,21 +205,22 @@ function IncomeView({
           ) : (
             <ul className="card divide-y divide-line overflow-hidden">
               {events.map((e) => (
-                <li key={e.tradeId} className="flex items-start justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link href={stockHref(e.symbol)} className="block truncate font-medium hover:text-brand hover:underline" title={e.name}>
-                      {e.name}
-                    </Link>
-                    <p className="truncate text-xs text-muted">
-                      {e.date} · {account ? "" : `${accountName.get(e.accountId)} · `}
-                      {fmtQty(e.quantity)}주 · 매도 {fmtPrice(e.price, e.currency)} / 평단 {fmtPrice(e.avgCost, e.currency)}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className={`font-semibold ${tone(e.pnlKrw)}`}>{fmtSigned(e.pnlKrw)}</p>
-                    <p className={`text-xs ${tone(e.returnRate)}`}>{fmtPct(e.returnRate)}</p>
-                  </div>
-                </li>
+                <SaleItem
+                  key={e.tradeId}
+                  name={e.name}
+                  href={stockHref(e.symbol)}
+                  meta={`${e.date} · ${account ? "" : `${accountName.get(e.accountId)} · `}${fmtQty(e.quantity)}주`}
+                  result={
+                    <>
+                      <p className={`font-semibold ${tone(e.pnlKrw)}`}>{fmtSigned(e.pnlKrw)}</p>
+                      <p className={`text-xs ${tone(e.returnRate)}`}>{fmtPct(e.returnRate)}</p>
+                    </>
+                  }
+                  figures={[
+                    ["매도가", fmtPrice(e.price, e.currency)],
+                    ["평단가", fmtPrice(e.avgCost, e.currency)],
+                  ]}
+                />
               ))}
             </ul>
           )
@@ -333,18 +334,17 @@ function TaxView({
         ) : (
           <ul className="card divide-y divide-line overflow-hidden">
             {sales.map((s) => (
-              <li key={s.tradeId} className="flex items-start justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <Link href={stockHref(s.symbol)} className="block truncate font-medium hover:text-brand hover:underline" title={s.name}>
-                    {s.name}
-                  </Link>
-                  <p className="truncate text-xs text-muted">
-                    {s.date} · {account ? "" : `${accountName.get(s.accountId)} · `}
-                    {fmtQty(s.quantity)}주 · 양도 {fmtKrw(s.proceedsKrw)} / 취득 {fmtKrw(s.costKrw)}
-                  </p>
-                </div>
-                <p className={`shrink-0 font-semibold ${tone(s.gainKrw)}`}>{fmtSigned(s.gainKrw)}</p>
-              </li>
+              <SaleItem
+                key={s.tradeId}
+                name={s.name}
+                href={stockHref(s.symbol)}
+                meta={`${s.date} · ${account ? "" : `${accountName.get(s.accountId)} · `}${fmtQty(s.quantity)}주`}
+                result={<p className={`font-semibold ${tone(s.gainKrw)}`}>{fmtSigned(s.gainKrw)}</p>}
+                figures={[
+                  ["양도가액", fmtKrw(s.proceedsKrw)],
+                  ["취득가액", fmtKrw(s.costKrw)],
+                ]}
+              />
             ))}
           </ul>
         )}
@@ -364,5 +364,45 @@ function TaxView({
         </div>
       </section>
     </>
+  );
+}
+
+/**
+ * 매도 한 건: 1줄 종목명 + 손익, 2줄 날짜·계좌·수량, 그 아래 칸을 나눈 금액 두 개.
+ * 한 줄에 다 넣으면 좁은 화면에서 금액이 잘려서 나눠 보여 준다.
+ */
+function SaleItem({
+  name,
+  href,
+  meta,
+  result,
+  figures,
+}: {
+  name: string;
+  href: string;
+  meta: string;
+  result: React.ReactNode;
+  figures: [string, string][];
+}) {
+  return (
+    <li className="px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link href={href} className="block truncate font-medium hover:text-brand hover:underline" title={name}>
+            {name}
+          </Link>
+          <p className="truncate text-xs text-muted">{meta}</p>
+        </div>
+        <div className="shrink-0 text-right">{result}</div>
+      </div>
+      <dl className="mt-2 grid grid-cols-2 divide-x divide-line rounded-lg bg-surface-2 text-xs">
+        {figures.map(([label, value]) => (
+          <div key={label} className="min-w-0 px-3 py-2">
+            <dt className="text-muted">{label}</dt>
+            <dd className="mt-0.5 truncate font-medium text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </li>
   );
 }
