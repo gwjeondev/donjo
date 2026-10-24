@@ -1,5 +1,5 @@
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
-import { cashKrw, hasCash, type CashBalance } from "@/lib/cash";
+import { cashKrw, type CashBalance } from "@/lib/cash";
 import type { Summary } from "@/lib/portfolio";
 
 export function SummaryCards({
@@ -25,13 +25,18 @@ export function SummaryCards({
         <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
         <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + cashTotal)}</p>
         {cash && (
-          // 주식·현금 내역을 한 줄로 (좁으면 항목 단위로 줄이 바뀐다)
-          <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
+          // 주식·현금 내역을 한 줄로: 현금은 원화(₩)와 달러($)를 따로 (총자산에는 달러를 오늘 환율로 원화 환산해 더한다)
+          <p className="mt-1 flex flex-wrap gap-x-1.5 text-xs text-muted">
             <span className="whitespace-nowrap">주식 {fmtKrw(summary.valueKrw)}</span>
-            <span className={`whitespace-nowrap ${cashTotal < 0 ? "text-up" : ""}`}>현금 {fmtKrw(cashTotal)}</span>
-            {hasCash(cash) && Math.abs(cash.usd) >= 0.01 && (
-              <span className="whitespace-nowrap">(달러 ${cash.usd.toLocaleString("en-US", { maximumFractionDigits: 2 })})</span>
-            )}
+            <span aria-hidden>·</span>
+            <span className="whitespace-nowrap">
+              현금 <span className={cash.krw < 0 ? "text-up" : ""}>{Math.round(cash.krw).toLocaleString("ko-KR")}₩</span>
+              {Math.abs(cash.usd) >= 0.01 && (
+                <span className={`ml-1.5 ${cash.usd < 0 ? "text-up" : ""}`}>
+                  {cash.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}$
+                </span>
+              )}
+            </span>
           </p>
         )}
         <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
