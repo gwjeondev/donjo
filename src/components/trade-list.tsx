@@ -7,6 +7,7 @@ import { fmtPrice, fmtQty, MARKET_LABEL } from "@/lib/format";
 import { currencyOf, type DisplayCurrency, type Trade } from "@/lib/portfolio";
 import { useDisplayCurrency } from "./currency";
 import { TrashIcon } from "./icons";
+import { DetailCard, type DetailRow } from "./detail-card";
 import { EditTradeButton } from "./trade-form";
 
 interface AccountOption {
@@ -129,33 +130,32 @@ export function TradeList({
       <ul className="divide-y divide-line xl:hidden">
         {trades.map((t) => {
           const f = tradeFigures(t, currency);
+          const rows: DetailRow[] = [
+            ["수량", `${fmtQty(t.quantity)}주`],
+            ["단가", fmtPrice(f.price, f.currency)],
+          ];
+          if (t.market === "US") rows.push(["환율", `${fmtQty(t.fxRate)}원`]);
+          if (t.fee || t.tax) rows.push(["수수료·세금", fmtPrice((t.fee + t.tax) * (f.currency === "KRW" && t.market === "US" ? t.fxRate : 1), f.currency)]);
+          if (t.memo) rows.push(["메모", t.memo]);
           return (
-            <li key={t.id} className="flex items-center gap-2 py-3 pl-4 pr-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <TypeBadge type={t.type} />
-                    <span className="truncate font-medium">{t.name}</span>
-                  </div>
-                  <span className="shrink-0 whitespace-nowrap text-sm font-medium">
-                    {fmtPrice(f.amount, f.currency)}
-                  </span>
-                </div>
-                {/* 날짜·계좌·수량×단가를 한 줄에. 좁으면 잘라내지 않고 단어 단위로 줄바꿈 */}
-                <div className="mt-1 text-xs text-muted" data-wrap="ok">
-                  <span className="whitespace-nowrap">{t.tradeDate}</span>
-                  {showAccount && <> · {accountName.get(t.accountId)}</>}
-                  {" · "}
-                  <span className="whitespace-nowrap">
-                    {fmtQty(t.quantity)}주 × {fmtPrice(f.price, f.currency)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-col">
-                <EditTradeButton accounts={accounts} trade={t} />
-                <DeleteButton id={t.id} />
-              </div>
-            </li>
+            <DetailCard
+              key={t.id}
+              title={
+                <span className="flex min-w-0 items-start gap-1.5">
+                  <TypeBadge type={t.type} />
+                  <span>{t.name}</span>
+                </span>
+              }
+              sub={`${t.tradeDate}${showAccount ? ` · ${accountName.get(t.accountId)}` : ""} · ${MARKET_LABEL[t.market]}`}
+              value={fmtPrice(f.amount, f.currency)}
+              rows={rows}
+              actions={
+                <>
+                  <EditTradeButton accounts={accounts} trade={t} />
+                  <DeleteButton id={t.id} />
+                </>
+              }
+            />
           );
         })}
       </ul>

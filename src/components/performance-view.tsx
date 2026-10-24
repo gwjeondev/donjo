@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
+import { DetailCard } from "./detail-card";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
@@ -130,24 +131,19 @@ export function PerformanceView({
 
             <ul className="divide-y divide-line xl:hidden">
               {[...data].reverse().map((r) => (
-                <li key={r.period} className="px-4 py-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-medium">{r.period}</span>
-                    <span className={`whitespace-nowrap text-base font-semibold ${tone(r.returnRate)}`}>{fmtPct(r.returnRate)}</span>
-                  </div>
-                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <dt className="text-muted">투자 손익</dt>
-                    <dd className={`text-right ${tone(r.pnl)}`}>{fmtSigned(r.pnl)}</dd>
-                    <dt className="text-muted">기말 평가금액</dt>
-                    <dd className="text-right">{fmtKrw(r.endValue)}</dd>
-                    <dt className="text-muted">기초 평가금액</dt>
-                    <dd className="text-right text-ink-2">{fmtKrw(r.startValue)}</dd>
-                    <dt className="text-muted">순투입</dt>
-                    <dd className="text-right text-ink-2">{fmtSigned(r.netFlow)}</dd>
-                    <dt className="text-muted">자산 증가율</dt>
-                    <dd className={`text-right ${tone(r.valueChangeRate)}`}>{r.startValue > 0 ? fmtPct(r.valueChangeRate) : "-"}</dd>
-                  </dl>
-                </li>
+                <DetailCard
+                  key={r.period}
+                  title={r.period}
+                  value={fmtPct(r.returnRate)}
+                  valueClass={tone(r.returnRate)}
+                  rows={[
+                    ["투자 손익", fmtSigned(r.pnl), tone(r.pnl)],
+                    ["기말 평가금액", fmtKrw(r.endValue)],
+                    ["기초 평가금액", fmtKrw(r.startValue), "text-ink-2"],
+                    ["순투입", fmtSigned(r.netFlow), "text-ink-2"],
+                    ["자산 증가율", r.startValue > 0 ? fmtPct(r.valueChangeRate) : "-", tone(r.valueChangeRate)],
+                  ]}
+                />
               ))}
             </ul>
           </div>

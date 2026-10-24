@@ -6,7 +6,7 @@ import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { DEFAULT_PREFS, HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
-import { PositionRow } from "./position-row";
+import { DetailCard } from "./detail-card";
 import { SortControl } from "./sort-control";
 
 /** 오늘 등락률 (전일 종가 대비) */
@@ -125,26 +125,27 @@ export function Holdings({
 
           {/* 모바일·태블릿: 카드 목록 */}
           <ul className="divide-y divide-line lg:hidden">
-            {rows.map(({ p, d }) => (
-              <li key={`${p.accountId}-${p.symbol}`}>
-                <Link href={stockHref(p.symbol)} className="block px-4 py-3 active:bg-surface-2">
-                  <PositionRow
-                    title={p.name}
-                    info={
-                      <>
-                        <span className="whitespace-nowrap">{fmtQty(p.quantity)}주</span> ·{" "}
-                        <span className="whitespace-nowrap">평단 {fmtPrice(d.avgCost, d.currency)}</span>
-                      </>
-                    }
-                    extra={<DayChange p={p} inline />}
-                    value={fmtPrice(d.value, d.currency)}
-                    pnl={signed(d.pnl, d.currency)}
-                    rate={fmtPct(d.returnRate)}
-                    toneClass={tone(d.pnl)}
-                  />
-                </Link>
-              </li>
-            ))}
+            {rows.map(({ p, d }) => {
+              const day = p.price != null && p.previousClose ? p.price / p.previousClose - 1 : null;
+              return (
+                <DetailCard
+                  key={`${p.accountId}-${p.symbol}`}
+                  title={p.name}
+                  sub={`${MARKET_LABEL[p.market]} · ${p.symbol.replace(/\.(KS|KQ)$/, "")}`}
+                  href={stockHref(p.symbol)}
+                  value={fmtPrice(d.value, d.currency)}
+                  rows={[
+                    ["평가손익", signed(d.pnl, d.currency), tone(d.pnl)],
+                    ["수익률", fmtPct(d.returnRate), tone(d.returnRate)],
+                    ["보유수량", `${fmtQty(p.quantity)}주`],
+                    ["현재가", d.price != null ? fmtPrice(d.price, d.currency) : "시세 없음"],
+                    ["평단가", fmtPrice(d.avgCost, d.currency)],
+                    ["오늘", day == null ? "-" : fmtPct(day), day == null ? "" : tone(day)],
+                    ["비중", totalValue > 0 ? fmtPct(p.valueKrw / totalValue, false) : "-"],
+                  ]}
+                />
+              );
+            })}
           </ul>
         </div>
       )}

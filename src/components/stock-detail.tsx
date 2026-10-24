@@ -4,7 +4,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { fmtPct, fmtPrice, fmtQty, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
-import { PositionRow } from "./position-row";
+import { DetailCard } from "./detail-card";
 
 const signed = (n: number, c: "KRW" | "USD") => `${n > 0 ? "+" : n < 0 ? "-" : ""}${fmtPrice(Math.abs(n), c)}`;
 
@@ -174,21 +174,17 @@ export function AccountBreakdown({
         {held.map((p) => {
           const d = displayFigures(p, currency, usdKrw);
           return (
-            <li key={p.accountId} className="px-4 py-3">
-              <PositionRow
-                title={p.accountName}
-                info={
-                  <>
-                    <span className="whitespace-nowrap">{fmtQty(p.quantity)}주</span> ·{" "}
-                    <span className="whitespace-nowrap">평단 {fmtPrice(d.avgCost, d.currency)}</span>
-                  </>
-                }
-                value={fmtPrice(d.value, d.currency)}
-                pnl={signed(d.pnl, d.currency)}
-                rate={fmtPct(d.returnRate)}
-                toneClass={tone(d.pnl)}
-              />
-            </li>
+            <DetailCard
+              key={p.accountId}
+              title={p.accountName}
+              value={fmtPrice(d.value, d.currency)}
+              rows={[
+                ["평가손익", signed(d.pnl, d.currency), tone(d.pnl)],
+                ["수익률", fmtPct(d.returnRate), tone(d.returnRate)],
+                ["보유수량", `${fmtQty(p.quantity)}주`],
+                ["평단가", fmtPrice(d.avgCost, d.currency)],
+              ]}
+            />
           );
         })}
       </ul>

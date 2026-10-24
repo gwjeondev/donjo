@@ -1,10 +1,10 @@
-// 손익 화면의 목록들. 매매기록·보유 종목과 같은 모양: 넓은 화면은 표, 좁은 화면은 PositionRow 카드
+// 손익 화면의 목록들. 다른 목록과 같은 모양: 넓은 화면은 표, 좁은 화면은 DetailCard
 import Link from "next/link";
 import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
 import { dividendNetKrw, type Dividend, type RealizedEvent } from "@/lib/income";
 import type { TaxableSale } from "@/lib/tax";
 import { DeleteDividendButton, EditDividendButton, type DividendStock } from "./dividend-form";
-import { PositionRow } from "./position-row";
+import { DetailCard, type DetailRow } from "./detail-card";
 
 const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
 const TABLE = "hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis";
@@ -55,30 +55,20 @@ export function RealizedList({ events, accountName, showAccount }: { events: Rea
       </table>
       <ul className="divide-y divide-line xl:hidden">
         {events.map((e) => (
-          <li key={e.tradeId}>
-            <Link href={stockHref(e.symbol)} className="block px-4 py-3 active:bg-surface-2">
-              <PositionRow
-                title={e.name}
-                info={
-                  <>
-                    <span className="whitespace-nowrap">{e.date}</span>
-                    {showAccount && <> · {accountName.get(e.accountId)}</>} · <span className="whitespace-nowrap">{fmtQty(e.quantity)}주</span>
-                  </>
-                }
-                extra={
-                  <span className="text-muted">
-                    <span className="whitespace-nowrap">매도 {fmtPrice(e.price, e.currency)}</span> ·{" "}
-                    <span className="whitespace-nowrap">평단 {fmtPrice(e.avgCost, e.currency)}</span>
-                  </span>
-                }
-                value={fmtSigned(e.pnlKrw)}
-                valueClass={tone(e.pnlKrw)}
-                pnl={fmtPct(e.returnRate)}
-                rate=""
-                toneClass={tone(e.returnRate)}
-              />
-            </Link>
-          </li>
+          <DetailCard
+            key={e.tradeId}
+            title={e.name}
+            sub={`${e.date}${showAccount ? ` · ${accountName.get(e.accountId)}` : ""}`}
+            href={stockHref(e.symbol)}
+            value={fmtSigned(e.pnlKrw)}
+            valueClass={tone(e.pnlKrw)}
+            rows={[
+              ["수익률", fmtPct(e.returnRate), tone(e.returnRate)],
+              ["수량", `${fmtQty(e.quantity)}주`],
+              ["매도가", fmtPrice(e.price, e.currency)],
+              ["평단가", fmtPrice(e.avgCost, e.currency)],
+            ]}
+          />
         ))}
       </ul>
     </div>
@@ -117,24 +107,19 @@ export function TaxSaleList({ sales, accountName, showAccount }: { sales: Taxabl
       </table>
       <ul className="divide-y divide-line xl:hidden">
         {sales.map((s) => (
-          <li key={s.tradeId}>
-            <Link href={stockHref(s.symbol)} className="block px-4 py-3 active:bg-surface-2">
-              <PositionRow
-                title={s.name}
-                info={
-                  <>
-                    <span className="whitespace-nowrap">{s.date}</span>
-                    {showAccount && <> · {accountName.get(s.accountId)}</>} · <span className="whitespace-nowrap">{fmtQty(s.quantity)}주</span>
-                  </>
-                }
-                value={fmtSigned(s.gainKrw)}
-                valueClass={tone(s.gainKrw)}
-                pnl={`양도 ${fmtKrw(s.proceedsKrw)}`}
-                rate={`취득 ${fmtKrw(s.costKrw)}`}
-                toneClass="text-ink-2"
-              />
-            </Link>
-          </li>
+          <DetailCard
+            key={s.tradeId}
+            title={s.name}
+            sub={`${s.date}${showAccount ? ` · ${accountName.get(s.accountId)}` : ""}`}
+            href={stockHref(s.symbol)}
+            value={fmtSigned(s.gainKrw)}
+            valueClass={tone(s.gainKrw)}
+            rows={[
+              ["수량", `${fmtQty(s.quantity)}주`],
+              ["양도가액", fmtKrw(s.proceedsKrw)],
+              ["취득가액", fmtKrw(s.costKrw)],
+            ]}
+          />
         ))}
       </ul>
     </div>
@@ -195,29 +180,31 @@ export function DividendList({
         </tbody>
       </table>
       <ul className="divide-y divide-line xl:hidden">
-        {dividends.map((d) => (
-          <li key={d.id} className="flex items-center gap-2 py-3 pl-4 pr-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3">
-                <Link href={stockHref(d.symbol)} className="truncate font-medium">
-                  {d.name}
-                </Link>
-                <span className="shrink-0 whitespace-nowrap text-sm font-medium text-up">+{fmtKrw(dividendNetKrw(d))}</span>
-              </div>
-              <div className="mt-1 text-xs text-muted" data-wrap="ok">
-                <span className="whitespace-nowrap">{d.payDate}</span>
-                {showAccount && <> · {accountName.get(d.accountId)}</>} ·{" "}
-                <span className="whitespace-nowrap">세전 {fmtPrice(d.amount, cur(d))}</span>
-                {d.tax ? <span className="whitespace-nowrap"> · 세금 {fmtPrice(d.tax, cur(d))}</span> : null}
-                {d.memo ? <> · {d.memo}</> : null}
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col">
-              <EditDividendButton accounts={accounts} stocks={stocks} dividend={d} />
-              <DeleteDividendButton id={d.id} />
-            </div>
-          </li>
-        ))}
+        {dividends.map((d) => {
+          const rows: DetailRow[] = [
+            ["세전", fmtPrice(d.amount, cur(d))],
+            ["세금", d.tax ? fmtPrice(d.tax, cur(d)) : "-"],
+          ];
+          if (d.market === "US") rows.push(["환율", `${fmtQty(d.fxRate)}원`]);
+          if (d.memo) rows.push(["메모", d.memo]);
+          return (
+            <DetailCard
+              key={d.id}
+              title={d.name}
+              sub={`${d.payDate}${showAccount ? ` · ${accountName.get(d.accountId)}` : ""}`}
+              href={stockHref(d.symbol)}
+              value={`+${fmtKrw(dividendNetKrw(d))}`}
+              valueClass="text-up"
+              rows={rows}
+              actions={
+                <>
+                  <EditDividendButton accounts={accounts} stocks={stocks} dividend={d} />
+                  <DeleteDividendButton id={d.id} />
+                </>
+              }
+            />
+          );
+        })}
       </ul>
     </div>
   );
