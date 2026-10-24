@@ -27,7 +27,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
         </PageHeader>
       </div>
       <div className="space-y-5">
-        <SummaryCards summary={summary} dividendKrw={dividendKrw} cash={cashByAccount.get(id)} usdKrw={fx.rate} />
+        <SummaryCards summary={summary} dividendKrw={dividendKrw} cash={cashByAccount.get(id) ?? { krw: 0, usd: 0 }} usdKrw={fx.rate} />
         <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} sort={prefs.holdings} />
         {/* 기록 목록은 거래내역 화면에서 (이 계좌로 걸러서 연다) */}
         <LinkCards

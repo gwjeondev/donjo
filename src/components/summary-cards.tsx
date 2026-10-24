@@ -14,7 +14,8 @@ export function SummaryCards({
   cash?: CashBalance;
   usdKrw?: number;
 }) {
-  const showCash = !!cash && hasCash(cash);
+  // 현금 잔고를 넘겨받는 화면(대시보드·계좌 상세)은 현금이 0이어도 총자산 = 주식 + 현금으로 나눠 보여 준다
+  const showCash = !!cash;
   const cashTotal = cash ? cashKrw(cash, usdKrw) : 0;
   // 총손익 = 평가손익 + 실현손익 + 받은 배당금
   const total = summary.totalPnlKrw + dividendKrw;
@@ -22,11 +23,8 @@ export function SummaryCards({
     <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="card p-5">
         <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + (showCash ? cashTotal : 0))}</p>
-        <p className={`mt-1 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
-          오늘 {fmtSigned(summary.dayChangeKrw)}
-        </p>
-        {showCash && cash && (
+        <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + cashTotal)}</p>
+        {cash && (
           // 좁은 칸에서 잘리지 않도록 주식·현금을 줄을 나눠 보여 준다
           <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 text-xs text-muted">
             <dt>주식</dt>
@@ -34,10 +32,15 @@ export function SummaryCards({
             <dt>현금</dt>
             <dd className={`text-right ${cashTotal < 0 ? "text-up" : ""}`}>
               {fmtKrw(cashTotal)}
-              {Math.abs(cash.usd) >= 0.01 && <span className="block">달러 ${cash.usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>}
+              {hasCash(cash) && Math.abs(cash.usd) >= 0.01 && (
+                <span className="block">달러 ${cash.usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+              )}
             </dd>
           </dl>
         )}
+        <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
+          오늘 {fmtSigned(summary.dayChangeKrw)}
+        </p>
       </div>
       <div className="card p-5">
         <p className="text-sm text-ink-2">평가손익</p>
