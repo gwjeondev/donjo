@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
-import { PositionRow } from "./position-row";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
@@ -129,25 +128,25 @@ export function PerformanceView({
               </tbody>
             </table>
 
-            {/* 휴대폰: 보유 종목·매매 내역과 같은 PositionRow 카드 */}
             <ul className="divide-y divide-line xl:hidden">
               {[...data].reverse().map((r) => (
                 <li key={r.period} className="px-4 py-3">
-                  <PositionRow
-                    title={r.period}
-                    info={<span className="whitespace-nowrap">기말 {fmtKrw(r.endValue)}</span>}
-                    extra={
-                      <span className="text-muted">
-                        <span className="whitespace-nowrap">순투입 {fmtSigned(r.netFlow)}</span>
-                        {r.startValue > 0 && <span className="whitespace-nowrap"> · 자산 증가율 {fmtPct(r.valueChangeRate)}</span>}
-                      </span>
-                    }
-                    value={fmtPct(r.returnRate)}
-                    valueClass={tone(r.returnRate)}
-                    pnl={fmtSigned(r.pnl)}
-                    rate=""
-                    toneClass={tone(r.pnl)}
-                  />
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium">{r.period}</span>
+                    <span className={`whitespace-nowrap text-base font-semibold ${tone(r.returnRate)}`}>{fmtPct(r.returnRate)}</span>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <dt className="text-muted">투자 손익</dt>
+                    <dd className={`text-right ${tone(r.pnl)}`}>{fmtSigned(r.pnl)}</dd>
+                    <dt className="text-muted">기말 평가금액</dt>
+                    <dd className="text-right">{fmtKrw(r.endValue)}</dd>
+                    <dt className="text-muted">기초 평가금액</dt>
+                    <dd className="text-right text-ink-2">{fmtKrw(r.startValue)}</dd>
+                    <dt className="text-muted">순투입</dt>
+                    <dd className="text-right text-ink-2">{fmtSigned(r.netFlow)}</dd>
+                    <dt className="text-muted">자산 증가율</dt>
+                    <dd className={`text-right ${tone(r.valueChangeRate)}`}>{r.startValue > 0 ? fmtPct(r.valueChangeRate) : "-"}</dd>
+                  </dl>
                 </li>
               ))}
             </ul>
