@@ -7,9 +7,7 @@ import { PerformanceView } from "@/components/performance-view";
 import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
 import { rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 import { RangeBar } from "./range-bar";
-import { FilterRow, StatCard } from "./filter-row";
-import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
-import Link from "next/link";
+import { FilterRow } from "./filter-row";
 
 const dot = (d: string) => d.replaceAll("-", ".");
 
@@ -65,20 +63,6 @@ export function PerformancePanel({
     return { from, to, daily: d.points, startValue: d.before?.value ?? 0, benchmark: b.points, base: b.before };
   }, [daily, benchmark, range, custom, last]);
 
-  // 요약 (모두 '성과·자산' 지표. 확정된 금액은 손익 화면): 기간 수익률, 자산 증가율, 평가금액
-  const stats = useMemo(() => {
-    let growth = 1;
-    let netFlow = 0;
-    for (const p of view.daily) {
-      growth *= 1 + p.ret;
-      netFlow += p.flow;
-    }
-    const end = view.daily.at(-1)?.value ?? 0;
-    return { rate: growth - 1, growthRate: view.startValue > 0 ? (end - view.startValue) / view.startValue : null, end, netFlow };
-  }, [view]);
-  // 손익 화면도 같은 계좌·기간으로 열리게
-  const incomeHref = `/income?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`;
-
   const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
 
   return (
@@ -87,29 +71,6 @@ export function PerformancePanel({
         {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />}
       </FilterRow>
 
-      {view.daily.length >= 2 && (
-        <div className={`grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-3 ${pending ? "opacity-50" : ""}`}>
-          <StatCard label="기간 수익률" value={fmtPct(stats.rate)} valueClass={tone(stats.rate)} sub="입출금 제외 (시간가중)" />
-          <StatCard
-            label="자산 증가율"
-            value={stats.growthRate == null ? "-" : fmtPct(stats.growthRate)}
-            valueClass={stats.growthRate == null ? "" : tone(stats.growthRate)}
-            sub="추가 매수까지 포함한 평가금액 증감"
-          />
-          <StatCard
-            label="평가금액"
-            value={fmtKrw(stats.end)}
-            sub={
-              <>
-                순투입 {fmtSigned(stats.netFlow)} ·{" "}
-                <Link href={incomeHref} className="text-brand hover:underline">
-                  확정 손익 보기 →
-                </Link>
-              </>
-            }
-          />
-        </div>
-      )}
 
       {daily.length >= 2 && view.daily.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">

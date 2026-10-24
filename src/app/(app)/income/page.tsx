@@ -149,19 +149,20 @@ function IncomeView({
         <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} shown={period} />
       </FilterRow>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="실현손익" value={fmtSigned(realizedKrw)} valueClass={tone(realizedKrw)} sub={`매도 ${events.length}건`} />
-        <StatCard label="배당금 (세후)" value={fmtSigned(dividendKrw)} valueClass={tone(dividendKrw)} sub={`${dividends.length}건`} />
-        <StatCard
-          label="확정 손익 합계"
-          value={fmtSigned(realizedKrw + dividendKrw)}
-          valueClass={tone(realizedKrw + dividendKrw)}
-          sub={
-            <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
-              수익률 보기 →
-            </Link>
-          }
-        />
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <StatCard label="실현손익" value={fmtSigned(realizedKrw)} valueClass={tone(realizedKrw)} sub={`매도 ${events.length}건`} />
+          <StatCard label="배당금 (세후)" value={fmtSigned(dividendKrw)} valueClass={tone(dividendKrw)} sub={`${dividends.length}건`} />
+        </div>
+        {/* 합계는 위 두 값을 더한 것이라 카드 대신 한 줄로 */}
+        <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1 text-sm">
+          <span className="text-ink-2">
+            합계 <span className={`font-semibold ${tone(realizedKrw + dividendKrw)}`}>{fmtSigned(realizedKrw + dividendKrw)}</span>
+          </span>
+          <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
+            수익률 보기 →
+          </Link>
+        </p>
       </div>
 
       {range === "전체" && years.length > 1 && (
