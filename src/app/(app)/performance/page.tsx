@@ -11,26 +11,28 @@ export const metadata = { title: "수익률" };
 export default async function PerformancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ account?: string; market?: string; range?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const { account } = params;
+  const market = params.market === "kr" || params.market === "us" ? params.market : undefined;
   const { range, custom } = parseRange(params);
   // 고른 기간 부근의 시세만 받아 계산한다 (기본 1M이라 첫 화면이 빨리 뜬다)
   const { from } = rangeBounds(range, todayStr(), custom);
   const userId = await requireUserId();
   const [accounts, perf] = await Promise.all([
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
-    loadPerformance(userId, account, from),
+    loadPerformance(userId, account, from, market),
   ]);
   return (
     <>
       <PageHeader title="수익률" sub="입출금을 뺀 투자 성과를 시장과 비교해요" />
       <PerformancePanel
         // 기간을 바꾸면 새 데이터로 다시 그리도록
-        key={`${range}|${custom.from}|${custom.to}|${account}`}
+        key={`${range}|${custom.from}|${custom.to}|${account}|${market}`}
         accounts={accounts}
         account={account}
+        market={market}
         range={range}
         custom={custom}
         firstTrade={perf.firstTrade}

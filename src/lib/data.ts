@@ -98,9 +98,9 @@ export async function loadPortfolio(userId: string, accountId?: string) {
  * from을 주면 그 날짜 부근부터만 시세를 받아 계산한다 (수익률 화면의 1M 등 짧은 기간을 빨리 보여 주기 위해).
  * 수익률은 기간 안의 일별 수익률을 이어 곱하므로 그 이전 시세는 필요 없다.
  */
-export async function loadPerformance(userId: string, accountId?: string, from?: string) {
+export async function loadPerformance(userId: string, accountId?: string, from?: string, market?: "kr" | "us") {
   try {
-    return { ...(await computePerformance(userId, accountId, from)), failed: false };
+    return { ...(await computePerformance(userId, accountId, from, market)), failed: false };
   } catch (e) {
     console.error("[performance] 계산 실패:", e);
     return { ...EMPTY_PERFORMANCE, failed: true };
@@ -115,8 +115,12 @@ const EMPTY_PERFORMANCE = {
   firstTrade: undefined as string | undefined,
 };
 
-async function computePerformance(userId: string, accountId?: string, rangeFrom?: string) {
-  const [trades, dividends] = await Promise.all([loadTrades(userId, accountId), loadDividends(userId, accountId)]);
+async function computePerformance(userId: string, accountId?: string, rangeFrom?: string, market?: "kr" | "us") {
+  // 국내/해외만 볼 때는 그 시장의 매매·배당만으로 계산한다
+  const isMarket = (m: string) => !market || (market === "us" ? m === "US" : m !== "US");
+  const [allTrades, allDividends] = await Promise.all([loadTrades(userId, accountId), loadDividends(userId, accountId)]);
+  const trades = allTrades.filter((t) => isMarket(t.market));
+  const dividends = allDividends.filter((d) => isMarket(d.market));
   if (trades.length === 0) return EMPTY_PERFORMANCE;
   const firstTrade = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
   // 기간 시작 직전 거래일(수익률 0% 기준점)이 들어가도록 일주일 앞부터 계산한다

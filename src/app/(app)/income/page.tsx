@@ -156,7 +156,7 @@ function IncomeView({
           sub={
             <>
               매도 {events.length}건 ·{" "}
-              <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
+              <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...(market ? { market } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
                 수익률 보기 →
               </Link>
             </>

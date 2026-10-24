@@ -8,6 +8,7 @@ import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
 import { rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 import { RangeBar } from "./range-bar";
 import { FilterRow } from "./filter-row";
+import { MarketFilter, type MarketGroup } from "./market-filter";
 
 const dot = (d: string) => d.replaceAll("-", ".");
 
@@ -18,6 +19,7 @@ const dot = (d: string) => d.replaceAll("-", ".");
 export function PerformancePanel({
   accounts,
   account,
+  market,
   range: initialRange,
   custom: initialCustom,
   firstTrade,
@@ -28,6 +30,7 @@ export function PerformancePanel({
 }: {
   accounts: { id: string; name: string }[];
   account?: string;
+  market?: MarketGroup;
   range: RangeId;
   custom: { from?: string; to?: string };
   firstTrade?: string;
@@ -67,7 +70,7 @@ export function PerformancePanel({
 
   return (
     <div className="space-y-4" aria-busy={pending}>
-      <FilterRow accounts={accounts} account={account}>
+      <FilterRow accounts={accounts} account={account} extra={<MarketFilter value={market} />}>
         {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />}
       </FilterRow>
 
