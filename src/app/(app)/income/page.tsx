@@ -13,7 +13,7 @@ import { todayStr } from "@/lib/market/service";
 import type { Market } from "@/lib/portfolio";
 import { parseRange, rangeBounds, rangeQuery } from "@/lib/range";
 import { requireUserId } from "@/lib/session";
-import { OVERSEAS_DEDUCTION, overseasSales, overseasTax, type CostMethod } from "@/lib/tax";
+import { OVERSEAS_DEDUCTION, overseasSales, overseasTax } from "@/lib/tax";
 
 export const metadata = { title: "손익" };
 
@@ -35,7 +35,6 @@ export default async function IncomePage({
     from?: string;
     to?: string;
     year?: string;
-    cost?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -274,7 +273,7 @@ function TaxView({
   accountName,
   today,
 }: {
-  params: { year?: string; cost?: string };
+  params: { year?: string };
   accounts: { id: string; name: string }[];
   account?: string;
   trades: Awaited<ReturnType<typeof loadTrades>>;
@@ -285,8 +284,8 @@ function TaxView({
   const sellYears = [...new Set(trades.filter((t) => t.market === "US" && t.type === "SELL").map((t) => t.tradeDate.slice(0, 4)))];
   const years = [...new Set([thisYear, ...sellYears])].sort().reverse();
   const year = params.year && years.includes(params.year) ? params.year : thisYear;
-  const method: CostMethod = params.cost === "avg" ? "avg" : "fifo";
-  const sales = overseasSales(trades, year, method).reverse();
+  // 취득가액은 이동평균 (증권사 앱·실현손익 탭과 같은 기준). 한 가지로 고정한다
+  const sales = overseasSales(trades, year, "avg").reverse();
   const tax = overseasTax(sales);
 
   return (
@@ -304,14 +303,7 @@ function TaxView({
           />
         }
       >
-        <QueryTabs
-          name="cost"
-          value={method}
-          tabs={[
-            { value: "fifo", label: "선입선출" },
-            { value: "avg", label: "이동평균" },
-          ]}
-        />
+        {null}
       </FilterRow>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -362,7 +354,7 @@ function TaxView({
             2%)를 곱한 예상액이에요.
           </p>
           <p>
-            취득가액은 선입선출법이 원칙이에요. 증권사가 이동평균법으로 계산해 주는 경우에만 이동평균을 골라 비교해 보세요. 원화 환산은 기록한
+            취득가액은 이동평균(평균 매입단가)으로 계산해요. 실현손익 탭, 증권사 앱에서 팔 때 보이는 손익과 같은 기준이에요. 원화 환산은 기록한
             매수·매도 환율을 써서, 결제일 환율로 하는 실제 신고와는 조금 다를 수 있어요.
           </p>
           <p>
