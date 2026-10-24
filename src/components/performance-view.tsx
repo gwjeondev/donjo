@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
+import Link from "next/link";
+import { periodBounds } from "@/lib/range";
 import { DetailCard } from "./detail-card";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
@@ -20,13 +22,20 @@ export function PerformanceView({
   points,
   startValue = 0,
   failed = false,
+  account,
+  market,
 }: {
   /** 조회 기간으로 자른 일별 자산 */
   points: DailyPoint[];
   /** 기간 직전 날의 평가금액 (첫 구간의 기초 금액) */
   startValue?: number;
   failed?: boolean;
+  /** 기간을 누르면 같은 조건으로 매매기록을 연다 */
+  account?: string;
+  market?: string;
 }) {
+  const tradesHref = (period: string) =>
+    `/transactions?${new URLSearchParams({ ...(account ? { account } : {}), ...(market ? { market } : {}), ...periodBounds(period) })}`;
   const [tab, setTab] = useState<TabId>("month");
   const rows = useMemo(() => aggregate(points, tab, startValue), [points, tab, startValue]);
   // 위에서 고른 조회 기간(1M·3M·YTD·1Y·전체·직접입력)의 구간을 전부 보여 준다
@@ -115,7 +124,11 @@ export function PerformanceView({
               <tbody className="divide-y divide-line">
                 {[...data].reverse().map((r) => (
                   <tr key={r.period}>
-                    <td className="px-4 py-2.5 text-ink-2">{r.period}</td>
+                    <td className="px-4 py-2.5">
+                      <Link href={tradesHref(r.period)} className="text-brand hover:underline" title="이 기간의 매매 기록 보기">
+                        {r.period}
+                      </Link>
+                    </td>
                     <td className="px-4 py-2.5 text-right">{fmtKrw(r.startValue)}</td>
                     <td className="px-4 py-2.5 text-right font-medium">{fmtKrw(r.endValue)}</td>
                     <td className="px-4 py-2.5 text-right text-ink-2">{fmtSigned(r.netFlow)}</td>
@@ -133,6 +146,7 @@ export function PerformanceView({
               {[...data].reverse().map((r) => (
                 <DetailCard
                   key={r.period}
+                  to={tradesHref(r.period)}
                   title={r.period}
                   value={fmtPct(r.returnRate)}
                   valueClass={tone(r.returnRate)}
@@ -148,7 +162,7 @@ export function PerformanceView({
             </ul>
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
+            기간을 누르면 그 기간의 매매 기록을 보여 줘요. <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
             <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 투자 손익 = 기말 − 기초 − 순투입으로, 아직 팔지 않은 종목의 평가 변화까지 들어가요. 매도로 확정된 손익은 손익 화면에서 볼 수 있어요.
           </p>
         </>

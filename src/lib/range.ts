@@ -57,3 +57,14 @@ export function rangeQuery(range: RangeId, custom: { from?: string; to?: string 
   }
   return q;
 }
+
+/** 기간 이름(YYYY, YYYY-MM, YYYY-MM-DD) → 그 기간의 첫날·마지막 날 */
+export function periodBounds(period: string): { from: string; to: string } {
+  if (period.length === 4) return { from: `${period}-01-01`, to: `${period}-12-31` };
+  if (period.length === 7) {
+    const [y, m] = period.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return { from: `${period}-01`, to: `${period}-${String(last).padStart(2, "0")}` };
+  }
+  return { from: period, to: period };
+}

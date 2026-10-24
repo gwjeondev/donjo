@@ -56,3 +56,13 @@ describe("짧은 기간만 계산", async () => {
     tail(part).forEach((p, i) => expect(p.ret).toBeCloseTo(tail(full)[i].ret));
   });
 });
+
+describe("periodBounds", async () => {
+  const { periodBounds } = await import("../range");
+  it("연·월·일을 첫날~마지막 날로", () => {
+    expect(periodBounds("2025")).toEqual({ from: "2025-01-01", to: "2025-12-31" });
+    expect(periodBounds("2025-08")).toEqual({ from: "2025-08-01", to: "2025-08-31" });
+    expect(periodBounds("2024-02")).toEqual({ from: "2024-02-01", to: "2024-02-29" });
+    expect(periodBounds("2025-08-01")).toEqual({ from: "2025-08-01", to: "2025-08-01" });
+  });
+});

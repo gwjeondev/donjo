@@ -18,6 +18,7 @@ export function DetailCard({
   valueClass = "",
   rows,
   actions,
+  to,
 }: {
   title: React.ReactNode;
   sub?: React.ReactNode;
@@ -28,9 +29,11 @@ export function DetailCard({
   rows: DetailRow[];
   /** 수정·삭제 등 (아래 오른쪽) */
   actions?: React.ReactNode;
+  /** 카드 전체를 누르면 갈 곳 (href 대신) */
+  to?: string;
 }) {
-  return (
-    <li className="px-4 py-3">
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {href ? (
@@ -53,6 +56,15 @@ export function DetailCard({
         ))}
       </dl>
       {actions && <div className="-mb-1 -mr-1.5 mt-1 flex justify-end">{actions}</div>}
+    </>
+  );
+  return to ? (
+    <li>
+      <Link href={to} className="block px-4 py-3 active:bg-surface-2">
+        {body}
+      </Link>
     </li>
+  ) : (
+    <li className="px-4 py-3">{body}</li>
   );
 }

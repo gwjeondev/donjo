@@ -91,6 +91,8 @@ export function PerformancePanel({
             points={view.daily}
             startValue={view.startValue}
             failed={failed}
+            account={account}
+            market={market}
           />
         </div>
       )}
