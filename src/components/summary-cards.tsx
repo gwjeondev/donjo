@@ -24,9 +24,12 @@ export function SummaryCards({
       <div className="card p-5">
         <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
         <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + cashTotal)}</p>
+        <p className={`mt-1 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
+          오늘 {fmtSigned(summary.dayChangeKrw)}
+        </p>
         {cash && (
-          // 좁은 칸에서 잘리지 않도록 주식·현금을 줄을 나눠 보여 준다
-          <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 text-xs text-muted">
+          // 총자산·오늘 아래에 구분선을 두고 주식·현금 내역 (좁은 칸에서 잘리지 않도록 줄을 나눈다)
+          <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 border-t border-line pt-3 text-xs text-muted">
             <dt>주식</dt>
             <dd className="text-right">{fmtKrw(summary.valueKrw)}</dd>
             <dt>현금</dt>
@@ -38,9 +41,6 @@ export function SummaryCards({
             </dd>
           </dl>
         )}
-        <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
-          오늘 {fmtSigned(summary.dayChangeKrw)}
-        </p>
       </div>
       <div className="card p-5">
         <p className="text-sm text-ink-2">평가손익</p>
