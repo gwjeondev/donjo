@@ -4,17 +4,21 @@ import { AccountFilter } from "./account-filter";
 export function FilterRow({
   accounts,
   account,
+  extra,
   children,
 }: {
   accounts: { id: string; name: string }[];
   account?: string;
+  /** 계좌 옆에 붙는 필터 (예: 국내/해외) */
+  extra?: React.ReactNode;
   /** 조회 기간 버튼 */
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-      <div className="flex">
+      <div className="flex min-w-0 items-center gap-2">
         <AccountFilter accounts={accounts} value={account} />
+        {extra}
       </div>
       <div className="min-w-0">{children}</div>
     </div>

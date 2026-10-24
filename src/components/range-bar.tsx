@@ -119,3 +119,63 @@ export function RangeFilter({
 }
 
 export { dot as dotDate };
+
+/** 시작일 ~ 종료일만 고르는 필터. 주소(?from=&to=)에 남기되 기본값과 같으면 생략한다 */
+export function DateRangeFilter({
+  from: initialFrom,
+  to: initialTo,
+  defaultFrom,
+  defaultTo,
+  min,
+}: {
+  from: string;
+  to: string;
+  defaultFrom: string;
+  defaultTo: string;
+  min?: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [, startTransition] = useTransition();
+  const [value, setValue] = useState({ from: initialFrom, to: initialTo });
+  const change = (k: "from" | "to", v: string) => {
+    const next = { ...value, [k]: v || (k === "from" ? defaultFrom : defaultTo) };
+    setValue(next);
+    const q = new URLSearchParams(params);
+    for (const key of ["from", "to"] as const) {
+      if (next[key] === (key === "from" ? defaultFrom : defaultTo)) q.delete(key);
+      else q.set(key, next[key]);
+    }
+    startTransition(() => router.replace(`${pathname}${q.size ? `?${q}` : ""}`, { scroll: false }));
+  };
+  const input = (k: "from" | "to", label: string) => (
+    <input
+      type="date"
+      aria-label={label}
+      className="input min-w-0 flex-1 px-2 py-1.5 sm:w-40 sm:flex-none sm:px-3 max-[359px]:text-sm"
+      value={value[k]}
+      min={k === "from" ? min : value.from}
+      max={k === "from" ? value.to : defaultTo}
+      onChange={(e) => change(k, e.target.value)}
+    />
+  );
+  return (
+    <div className="flex w-full items-center gap-1.5 sm:w-auto sm:gap-2" role="group" aria-label="조회 기간">
+      {input("from", "시작일")}
+      <span className="text-muted">~</span>
+      {input("to", "종료일")}
+      {(value.from !== defaultFrom || value.to !== defaultTo) && (
+        <button type="button" className="shrink-0 text-xs font-medium text-brand" onClick={() => {
+          setValue({ from: defaultFrom, to: defaultTo });
+          const q = new URLSearchParams(params);
+          q.delete("from");
+          q.delete("to");
+          startTransition(() => router.replace(`${pathname}${q.size ? `?${q}` : ""}`, { scroll: false }));
+        }}>
+          최근 한 달
+        </button>
+      )}
+    </div>
+  );
+}

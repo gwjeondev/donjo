@@ -65,7 +65,7 @@ export function PerformancePanel({
     return { from, to, daily: d.points, startValue: d.before?.value ?? 0, benchmark: b.points, base: b.before };
   }, [daily, benchmark, range, custom, last]);
 
-  // 요약: 기간 수익률(입출금 제외), 기간 손익(금액), 기말 평가금액
+  // 요약 (모두 '성과·자산' 지표. 확정된 금액은 손익 화면): 기간 수익률, 자산 증가율, 평가금액
   const stats = useMemo(() => {
     let growth = 1;
     let netFlow = 0;
@@ -74,10 +74,10 @@ export function PerformancePanel({
       netFlow += p.flow;
     }
     const end = view.daily.at(-1)?.value ?? 0;
-    return { rate: growth - 1, pnl: end - view.startValue - netFlow, end, netFlow };
+    return { rate: growth - 1, growthRate: view.startValue > 0 ? (end - view.startValue) / view.startValue : null, end, netFlow };
   }, [view]);
   // 손익 화면도 같은 계좌·기간으로 열리게
-  const incomeHref = `/income?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom, "전체") })}`;
+  const incomeHref = `/income?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`;
 
   const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
 
@@ -90,7 +90,12 @@ export function PerformancePanel({
       {view.daily.length >= 2 && (
         <div className={`grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-3 ${pending ? "opacity-50" : ""}`}>
           <StatCard label="기간 수익률" value={fmtPct(stats.rate)} valueClass={tone(stats.rate)} sub="입출금 제외 (시간가중)" />
-          <StatCard label="기간 손익" value={fmtSigned(stats.pnl)} valueClass={tone(stats.pnl)} sub="평가손익 변화 + 실현손익 + 배당" />
+          <StatCard
+            label="자산 증가율"
+            value={stats.growthRate == null ? "-" : fmtPct(stats.growthRate)}
+            valueClass={stats.growthRate == null ? "" : tone(stats.growthRate)}
+            sub="추가 매수까지 포함한 평가금액 증감"
+          />
           <StatCard
             label="평가금액"
             value={fmtKrw(stats.end)}

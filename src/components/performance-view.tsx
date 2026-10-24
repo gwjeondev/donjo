@@ -106,7 +106,7 @@ export function PerformanceView({
                   <th className="px-4 py-2.5 text-right font-medium">기초 평가금액</th>
                   <th className="px-4 py-2.5 text-right font-medium">기말 평가금액</th>
                   <th className="px-4 py-2.5 text-right font-medium">순투입</th>
-                  <th className="px-4 py-2.5 text-right font-medium">손익</th>
+                  <th className="px-4 py-2.5 text-right font-medium">투자 손익</th>
                   <th className="px-4 py-2.5 text-right font-medium">수익률</th>
                   <th className="px-4 py-2.5 text-right font-medium">자산 증가율</th>
                 </tr>
@@ -136,7 +136,7 @@ export function PerformanceView({
                     <span className={`whitespace-nowrap text-base font-semibold ${tone(r.returnRate)}`}>{fmtPct(r.returnRate)}</span>
                   </div>
                   <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <dt className="text-muted">손익</dt>
+                    <dt className="text-muted">투자 손익</dt>
                     <dd className={`text-right ${tone(r.pnl)}`}>{fmtSigned(r.pnl)}</dd>
                     <dt className="text-muted">기말 평가금액</dt>
                     <dd className="text-right">{fmtKrw(r.endValue)}</dd>
@@ -153,7 +153,7 @@ export function PerformanceView({
           </div>
           <p className="text-xs leading-relaxed text-muted">
             <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
-            <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 손익 = 기말 − 기초 − 순투입.
+            <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 투자 손익 = 기말 − 기초 − 순투입으로, 아직 팔지 않은 종목의 평가 변화까지 들어가요. 매도로 확정된 손익은 손익 화면에서 볼 수 있어요.
           </p>
         </>
       )}
