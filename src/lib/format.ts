@@ -15,6 +15,9 @@ export const fmtQty = (n: number) => qty.format(n);
 export const fmtPct = (r: number, signed = true) =>
   `${signed && r > 0 ? "+" : ""}${(r * 100).toFixed(2)}%`;
 export const fmtSigned = (n: number) => `${n > 0 ? "+" : ""}${fmtKrw(n)}`;
+/** 부호 붙인 금액 (달러는 -$12.00처럼 부호를 $ 앞에) */
+export const fmtSignedPrice = (n: number, currency: "KRW" | "USD") =>
+  currency === "USD" ? `${n > 0 ? "+" : n < 0 ? "-" : ""}$${usd.format(Math.abs(n))}` : fmtSigned(n);
 
 /** 한국 시장 관례: 상승 빨강, 하락 파랑 */
 export const tone = (n: number) => (n > 0 ? "text-up" : n < 0 ? "text-down" : "text-muted");

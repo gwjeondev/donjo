@@ -44,6 +44,8 @@ export interface RealizedEvent {
   pnlKrw: number;
   proceedsKrw: number;
   costKrw: number;
+  /** 매도일 환율 (국내 종목은 1) */
+  fxRate: number;
   /** 손익 ÷ 매입금액 (원화 기준) */
   returnRate: number;
 }
@@ -89,6 +91,7 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
       pnlKrw: proceedsKrw - costKrw,
       proceedsKrw,
       costKrw,
+      fxRate: fx,
       returnRate: costKrw > 0 ? (proceedsKrw - costKrw) / costKrw : 0,
     });
     h.qty -= qty;

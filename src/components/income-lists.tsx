@@ -1,73 +1,19 @@
 // 손익 화면의 목록들. 다른 목록과 같은 모양: 넓은 화면은 표, 좁은 화면은 DetailCard
-import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
-import { dividendNetKrw, type Dividend, type RealizedEvent } from "@/lib/income";
+import { fmtKrw, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
+import { dividendNetKrw, type Dividend } from "@/lib/income";
 import type { TaxableSale } from "@/lib/tax";
 import { DetailCard, NameLink, type DetailRow } from "./detail-card";
 
-const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
-const TABLE = "hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis";
-const HEAD = "border-b border-line bg-surface-2 text-xs text-ink-2";
-const th = (w: string, align: "left" | "right" | "center" = "right") => `${w} px-3 py-2.5 text-${align} font-medium`;
+export const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
+export const TABLE = "hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis";
+export const HEAD = "border-b border-line bg-surface-2 text-xs text-ink-2";
+export const th = (w: string, align: "left" | "right" | "center" = "right") => `${w} px-3 py-2.5 text-${align} font-medium`;
 
-function StockCell({ name, symbol }: { name: string; symbol: string }) {
+export function StockCell({ name, symbol }: { name: string; symbol: string }) {
   return (
     <td className="px-3 py-3" title={name}>
       <NameLink href={stockHref(symbol)}>{name}</NameLink>
     </td>
-  );
-}
-
-/** 실현손익: 매도 한 건마다 */
-export function RealizedList({ events, accountName, showAccount }: { events: RealizedEvent[]; accountName: Map<string, string>; showAccount: boolean }) {
-  return (
-    <div className="card overflow-hidden">
-      <table className={TABLE}>
-        <thead className={HEAD}>
-          <tr>
-            <th className={`${th("w-32", "left")} pl-4`}>매도일</th>
-            {showAccount && <th className={th("w-28", "left")}>계좌</th>}
-            <th className={th("", "left")}>종목</th>
-            <th className={th("w-28")}>수량</th>
-            <th className={th("w-32")}>매도가</th>
-            <th className={th("w-32")}>평단가</th>
-            <th className={th("w-36")}>실현손익</th>
-            <th className={`${th("w-24")} pr-4`}>수익률</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line">
-          {events.map((e) => (
-            <tr key={e.tradeId} className="hover:bg-surface-2/60">
-              <td className="py-3 pl-4 pr-3 text-ink-2">{e.date}</td>
-              {showAccount && <td className="truncate px-3 py-3 text-ink-2">{accountName.get(e.accountId)}</td>}
-              <StockCell name={e.name} symbol={e.symbol} />
-              <td className="px-3 py-3 text-right">{fmtQty(e.quantity)}</td>
-              <td className="px-3 py-3 text-right">{fmtPrice(e.price, e.currency)}</td>
-              <td className="px-3 py-3 text-right text-ink-2">{fmtPrice(e.avgCost, e.currency)}</td>
-              <td className={`px-3 py-3 text-right font-medium ${tone(e.pnlKrw)}`}>{fmtSigned(e.pnlKrw)}</td>
-              <td className={`py-3 pl-3 pr-4 text-right ${tone(e.returnRate)}`}>{fmtPct(e.returnRate)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <ul className="divide-y divide-line xl:hidden">
-        {events.map((e) => (
-          <DetailCard
-            key={e.tradeId}
-            title={e.name}
-            sub={`${e.date}${showAccount ? ` · ${accountName.get(e.accountId)}` : ""}`}
-            href={stockHref(e.symbol)}
-            value={fmtSigned(e.pnlKrw)}
-            valueClass={tone(e.pnlKrw)}
-            rows={[
-              ["수익률", fmtPct(e.returnRate), tone(e.returnRate)],
-              ["수량", `${fmtQty(e.quantity)}주`],
-              ["매도가", fmtPrice(e.price, e.currency)],
-              ["평단가", fmtPrice(e.avgCost, e.currency)],
-            ]}
-          />
-        ))}
-      </ul>
-    </div>
   );
 }
 

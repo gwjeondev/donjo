@@ -34,7 +34,7 @@ export function PerformanceView({
   market?: string;
 }) {
   const tradesHref = (period: string) =>
-    `/transactions?${new URLSearchParams({ ...(account ? { account } : {}), ...(market ? { market } : {}), ...periodBounds(period) })}`;
+    `/transactions?${new URLSearchParams({ ...(account ? { account } : {}), ...(market ? { market } : {}), range: "custom", ...periodBounds(period) })}`;
   const [tab, setTab] = useState<TabId>("month");
   const rows = useMemo(() => aggregate(points, tab, startValue), [points, tab, startValue]);
   // 위에서 고른 조회 기간(1M·3M·YTD·1Y·전체·직접입력)의 구간을 전부 보여 준다

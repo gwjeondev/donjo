@@ -71,12 +71,12 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
         <StockSummary position={position} usdKrw={fx.rate} />
         <StockPriceChart points={points} avgCost={position.quantity > 0 ? position.avgCost : null} currency={currency} />
         <AccountBreakdown rows={positions.map((p) => ({ ...p, accountName: accountName.get(p.accountId) ?? "" }))} usdKrw={fx.rate} />
-        {/* 기록 목록은 거래내역 화면에서 (이 종목으로 걸러서, 첫 매매일부터 오늘까지 연다) */}
+        {/* 기록 목록은 거래내역 화면에서 (이 종목으로 걸러서 전체 기간으로 연다) */}
         <LinkCards
           label="이 종목 더 보기"
           links={[
-            { href: `/transactions?symbol=${encodeURIComponent(symbol)}&from=${sorted[0].tradeDate}`, label: "거래내역", desc: "이 종목의 매매·배당 기록" },
-            { href: `/income?symbol=${encodeURIComponent(symbol)}`, label: "손익", desc: "이 종목의 실현손익·배당금" },
+            { href: `/transactions?symbol=${encodeURIComponent(symbol)}&range=all`, label: "거래내역", desc: "이 종목의 매매·배당 기록" },
+            { href: `/income?symbol=${encodeURIComponent(symbol)}&range=all`, label: "손익", desc: "이 종목의 실현손익·배당금" },
           ]}
         />
       </div>

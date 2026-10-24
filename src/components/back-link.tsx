@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 const KEY = "donjo:nav";
 const ROOT_FLAG = "donjo:navroot";
+const POP_FLAG = "donjo:navpop";
 
 /** 상세 화면: 앱 안 기록이 없어도(주소로 바로 연 경우) 뒤로를 보여 주고, 그때 갈 곳 */
 function fallbackOf(path: string) {
@@ -43,23 +44,36 @@ export function PageBack() {
         } catch {}
       }
     };
+    // 뒤로·앞으로 가기(브라우저 버튼, router.back)는 popstate로 알 수 있다
+    const onPop = () => {
+      try {
+        sessionStorage.setItem(POP_FLAG, "1");
+      } catch {}
+    };
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    window.addEventListener("popstate", onPop);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("popstate", onPop);
+    };
   }, []);
 
   useEffect(() => {
     let stack = read();
     let fromMenu = false;
+    let popped = false;
     try {
       fromMenu = sessionStorage.getItem(ROOT_FLAG) === "1";
+      popped = sessionStorage.getItem(POP_FLAG) === "1";
       sessionStorage.removeItem(ROOT_FLAG);
+      sessionStorage.removeItem(POP_FLAG);
     } catch {}
     const top = stack.at(-1);
     if (!top) stack = [{ path, root: !fallbackOf(path) }];
     else if (fromMenu) stack = [...stack, { path, root: true }].slice(-30); // 메뉴로 연 화면은 첫 화면 (브라우저 뒤로 가기는 그대로 맞도록 기록은 이어 둔다)
     else if (top.path === path) {
       // 새로고침
-    } else if (stack.at(-2)?.path === path) stack = stack.slice(0, -1); // 뒤로 가기
+    } else if (popped && stack.at(-2)?.path === path) stack = stack.slice(0, -1); // 뒤로 가기 (링크로 같은 화면에 다시 가는 건 앞으로 쌓는다)
     else stack = [...stack, { path, root: false }].slice(-30);
     try {
       sessionStorage.setItem(KEY, JSON.stringify(stack));

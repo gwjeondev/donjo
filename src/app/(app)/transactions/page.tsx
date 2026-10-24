@@ -1,10 +1,12 @@
 import { AccountFilter } from "@/components/account-filter";
 import { CurrencyToggle } from "@/components/currency";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
-import { DateRangeFilter } from "@/components/range-bar";
+import { RangeFilter } from "@/components/range-bar";
 import { TradeSearch } from "@/components/trade-search";
 import { todayStr } from "@/lib/market/service";
-import { rangeBounds } from "@/lib/range";
+import { DEFAULT_RANGE, parseRange, rangeBounds } from "@/lib/range";
+
+const dot = (d: string) => d.replaceAll("-", ".");
 import { TradeSort, type TradeOrder } from "@/components/trade-sort";
 import { ExportButton, ImportButton } from "@/components/csv-actions";
 import { PageHeader } from "@/components/page-header";
@@ -22,7 +24,7 @@ export const metadata = { title: "거래내역" };
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; market?: string; kind?: string; q?: string; symbol?: string; sort?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ account?: string; market?: string; kind?: string; q?: string; symbol?: string; range?: string; sort?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const account = params.account;
@@ -43,16 +45,14 @@ export default async function TransactionsPage({
   const q = (params.q ?? "").trim().toLowerCase();
   // 종목 상세에서 넘어오면 그 종목만 (종목코드가 정확히 같은 것)
   const symbol = params.symbol || undefined;
-  // 조회 기간: 시작일 ~ 종료일 (기본: 한 달 전 ~ 오늘)
+  // 조회 기간: 1M·3M·YTD·1Y·전체·직접입력 (기본 1M). 기간 없이 from/to만 오면 직접입력으로 본다
   const today = todayStr();
-  const defaultFrom = rangeBounds("1M", today).from!;
-  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
-  let from = isDate(params.from) ? params.from! : defaultFrom;
-  let to = isDate(params.to) ? params.to! : today;
-  if (from > to) [from, to] = [to, from];
+  const { range, custom } = parseRange(params.range || !(params.from || params.to) ? params : { ...params, range: "custom" });
+  const { from, to } = rangeBounds(range, today, custom);
   const firstDate = [allTrades.at(-1)?.tradeDate, allDividends.at(-1)?.payDate, allCash.at(-1)?.date].filter(Boolean).sort()[0];
-  const filtered = from !== defaultFrom || to !== today;
-  const inRange = (d: string) => d >= from && d <= to;
+  const period = range === "전체" ? "전체 기간" : `${dot(from ?? firstDate ?? today)} ~ ${dot(to ?? today)}`;
+  const filtered = range !== DEFAULT_RANGE;
+  const inRange = (d: string) => (!from || d >= from) && (!to || d <= to);
   const inMarket = (m: string) => !market || (market === "us" ? m === "US" : m !== "US");
   const matches = (name: string, s: string) =>
     (!symbol || s === symbol) && (!q || name.toLowerCase().includes(q) || s.replace(/\.(KS|KQ)$/, "").toLowerCase().includes(q));
@@ -60,7 +60,7 @@ export default async function TransactionsPage({
   const dividends = kind && kind !== "dividend" ? [] : allDividends.filter((d) => inRange(d.payDate) && inMarket(d.market) && matches(d.name, d.symbol));
   const cashFlows = (kind && kind !== "cash") || market || q || symbol ? [] : allCash.filter((c) => inRange(c.date));
   const trades = (kind && kind !== "trade" ? [] : allTrades)
-    .filter((t) => t.tradeDate >= from && t.tradeDate <= to)
+    .filter((t) => inRange(t.tradeDate))
     .filter((t) => !market || (market === "us" ? t.market === "US" : t.market !== "US"))
     .filter((t) => !symbol || t.symbol === symbol)
     // 종목 검색: 종목명 또는 종목코드(접미사 .KS/.KQ 제외)에 검색어가 들어 있으면
@@ -110,7 +110,7 @@ export default async function TransactionsPage({
         <AddRecordButton accounts={accounts} stocks={dividendStocks(everyTrade ?? allTrades)} defaultAccountId={account} />
       </PageHeader>
       <div className="-mt-2 mb-4 flex flex-wrap items-center justify-between gap-2">
-        <DateRangeFilter key={`${from}|${to}`} from={from} to={to} defaultFrom={defaultFrom} defaultTo={today} min={firstDate} />
+        <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback={DEFAULT_RANGE} min={firstDate} max={today} shown={period} />
         {allTrades.some((t) => t.market === "US") && market !== "kr" && <CurrencyToggle />}
       </div>
       {symbol && (
@@ -126,7 +126,7 @@ export default async function TransactionsPage({
         order={order}
         accounts={accounts}
         showAccount={!account}
-        emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || symbol || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 시작일을 앞당겨 보세요.") : undefined}
+        emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || symbol || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 기간을 늘려 보세요.") : undefined}
       />
     </>
   );
