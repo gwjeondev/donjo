@@ -1,4 +1,3 @@
-import { AccountFilter } from "@/components/account-filter";
 import { PageHeader } from "@/components/page-header";
 import { PerformancePanel } from "@/components/performance-panel";
 import { loadPerformance } from "@/lib/data";
@@ -26,14 +25,12 @@ export default async function PerformancePage({
   ]);
   return (
     <>
-      <PageHeader
-        title="수익률"
-        sub="일별 · 월별 · 연도별 자산 증가율"
-        toolbar={<AccountFilter accounts={accounts} value={account} />}
-      />
+      <PageHeader title="수익률" sub="입출금을 뺀 투자 성과를 시장과 비교해요" />
       <PerformancePanel
         // 기간을 바꾸면 새 데이터로 다시 그리도록
         key={`${range}|${custom.from}|${custom.to}|${account}`}
+        accounts={accounts}
+        account={account}
         range={range}
         custom={custom}
         firstTrade={perf.firstTrade}

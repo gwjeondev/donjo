@@ -7,6 +7,9 @@ import { PerformanceView } from "@/components/performance-view";
 import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
 import { rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 import { RangeBar } from "./range-bar";
+import { FilterRow, StatCard } from "./filter-row";
+import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
+import Link from "next/link";
 
 const dot = (d: string) => d.replaceAll("-", ".");
 
@@ -15,6 +18,8 @@ const dot = (d: string) => d.replaceAll("-", ".");
  * 시장 비교 차트와 기간별 수익률에 함께 적용한다.
  */
 export function PerformancePanel({
+  accounts,
+  account,
   range: initialRange,
   custom: initialCustom,
   firstTrade,
@@ -23,6 +28,8 @@ export function PerformancePanel({
   missing,
   failed,
 }: {
+  accounts: { id: string; name: string }[];
+  account?: string;
   range: RangeId;
   custom: { from?: string; to?: string };
   firstTrade?: string;
@@ -58,12 +65,45 @@ export function PerformancePanel({
     return { from, to, daily: d.points, startValue: d.before?.value ?? 0, benchmark: b.points, base: b.before };
   }, [daily, benchmark, range, custom, last]);
 
+  // 요약: 기간 수익률(입출금 제외), 기간 손익(금액), 기말 평가금액
+  const stats = useMemo(() => {
+    let growth = 1;
+    let netFlow = 0;
+    for (const p of view.daily) {
+      growth *= 1 + p.ret;
+      netFlow += p.flow;
+    }
+    const end = view.daily.at(-1)?.value ?? 0;
+    return { rate: growth - 1, pnl: end - view.startValue - netFlow, end, netFlow };
+  }, [view]);
+  // 손익 화면도 같은 계좌·기간으로 열리게
+  const incomeHref = `/income?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom, "전체") })}`;
+
   const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
 
   return (
     <div className="space-y-4" aria-busy={pending}>
-      {daily.length >= 2 && (
-        <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />
+      <FilterRow accounts={accounts} account={account}>
+        {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />}
+      </FilterRow>
+
+      {view.daily.length >= 2 && (
+        <div className={`grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-3 ${pending ? "opacity-50" : ""}`}>
+          <StatCard label="기간 수익률" value={fmtPct(stats.rate)} valueClass={tone(stats.rate)} sub="입출금 제외 (시간가중)" />
+          <StatCard label="기간 손익" value={fmtSigned(stats.pnl)} valueClass={tone(stats.pnl)} sub="평가손익 변화 + 실현손익 + 배당" />
+          <StatCard
+            label="평가금액"
+            value={fmtKrw(stats.end)}
+            sub={
+              <>
+                순투입 {fmtSigned(stats.netFlow)} ·{" "}
+                <Link href={incomeHref} className="text-brand hover:underline">
+                  확정 손익 보기 →
+                </Link>
+              </>
+            }
+          />
+        </div>
       )}
 
       {daily.length >= 2 && view.daily.length === 0 ? (

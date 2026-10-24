@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { AccountFilter } from "@/components/account-filter";
+import { FilterRow, StatCard } from "@/components/filter-row";
 import { AddDividendButton, DeleteDividendButton, EditDividendButton, type DividendStock } from "@/components/dividend-form";
 import { PageHeader } from "@/components/page-header";
 import { QueryTabs } from "@/components/query-select";
 import { RangeFilter } from "@/components/range-bar";
 import { todayStr } from "@/lib/market/service";
-import { parseRange, rangeBounds } from "@/lib/range";
+import { parseRange, rangeBounds, rangeQuery } from "@/lib/range";
 import { loadDividends, loadTrades } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
@@ -65,42 +65,36 @@ export default async function IncomePage({
     <>
       <PageHeader
         title="손익"
-        sub="매도로 확정된 실현손익과 받은 배당금"
-        toolbar={
-          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-            <AccountFilter accounts={accounts} value={account} />
-          </div>
-        }
+        sub="매도로 확정된 손익과 받은 배당금이에요"
       >
         <AddDividendButton accounts={accounts} stocks={stocks} defaultAccountId={account} />
       </PageHeader>
 
       <div className="space-y-5">
-        <RangeFilter
-          key={`${range}|${custom.from}|${custom.to}`}
-          range={range}
-          custom={custom}
-          fallback="전체"
-          min={firstDate}
-          max={today}
-          shown={period}
-        />
+        <FilterRow accounts={accounts} account={account}>
+          <RangeFilter
+            key={`${range}|${custom.from}|${custom.to}`}
+            range={range}
+            custom={custom}
+            fallback="전체"
+            min={firstDate}
+            max={today}
+            shown={period}
+          />
+        </FilterRow>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="card p-5">
-            <p className="text-sm text-ink-2">실현손익</p>
-            <p className={`mt-1 text-2xl font-bold ${tone(realizedKrw)}`}>{fmtSigned(realizedKrw)}</p>
-            <p className="mt-1 text-xs text-muted">매도 {events.length}건</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-ink-2">배당금 (세후)</p>
-            <p className={`mt-1 text-2xl font-bold ${tone(dividendKrw)}`}>{fmtSigned(dividendKrw)}</p>
-            <p className="mt-1 text-xs text-muted">{dividends.length}건</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-ink-2">합계</p>
-            <p className={`mt-1 text-2xl font-bold ${tone(realizedKrw + dividendKrw)}`}>{fmtSigned(realizedKrw + dividendKrw)}</p>
-            <p className="mt-1 text-xs text-muted">{period}</p>
-          </div>
+          <StatCard label="실현손익" value={fmtSigned(realizedKrw)} valueClass={tone(realizedKrw)} sub={`매도 ${events.length}건`} />
+          <StatCard label="배당금 (세후)" value={fmtSigned(dividendKrw)} valueClass={tone(dividendKrw)} sub={`${dividends.length}건`} />
+          <StatCard
+            label="확정 손익 합계"
+            value={fmtSigned(realizedKrw + dividendKrw)}
+            valueClass={tone(realizedKrw + dividendKrw)}
+            sub={
+              <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
+                수익률 보기 →
+              </Link>
+            }
+          />
         </div>
 
         {range === "전체" && years.length > 1 && (
