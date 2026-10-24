@@ -24,23 +24,19 @@ export function SummaryCards({
       <div className="card p-5">
         <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
         <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + cashTotal)}</p>
-        <p className={`mt-1 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
+        {cash && (
+          // 주식·현금 내역을 한 줄로 (좁으면 항목 단위로 줄이 바뀐다)
+          <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
+            <span className="whitespace-nowrap">주식 {fmtKrw(summary.valueKrw)}</span>
+            <span className={`whitespace-nowrap ${cashTotal < 0 ? "text-up" : ""}`}>현금 {fmtKrw(cashTotal)}</span>
+            {hasCash(cash) && Math.abs(cash.usd) >= 0.01 && (
+              <span className="whitespace-nowrap">(달러 ${cash.usd.toLocaleString("en-US", { maximumFractionDigits: 2 })})</span>
+            )}
+          </p>
+        )}
+        <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
           오늘 {fmtSigned(summary.dayChangeKrw)}
         </p>
-        {cash && (
-          // 총자산·오늘 아래에 구분선을 두고 주식·현금 내역 (좁은 칸에서 잘리지 않도록 줄을 나눈다)
-          <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 border-t border-line pt-3 text-xs text-muted">
-            <dt>주식</dt>
-            <dd className="text-right">{fmtKrw(summary.valueKrw)}</dd>
-            <dt>현금</dt>
-            <dd className={`text-right ${cashTotal < 0 ? "text-up" : ""}`}>
-              {fmtKrw(cashTotal)}
-              {hasCash(cash) && Math.abs(cash.usd) >= 0.01 && (
-                <span className="block">달러 ${cash.usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-              )}
-            </dd>
-          </dl>
-        )}
       </div>
       <div className="card p-5">
         <p className="text-sm text-ink-2">평가손익</p>
