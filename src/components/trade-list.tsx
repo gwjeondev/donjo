@@ -140,12 +140,8 @@ export function TradeList({
           return (
             <DetailCard
               key={t.id}
-              title={
-                <span className="flex min-w-0 items-start gap-1.5">
-                  <TypeBadge type={t.type} />
-                  <span>{t.name}</span>
-                </span>
-              }
+              title={t.name}
+              badge={<TypeBadge type={t.type} />}
               sub={`${t.tradeDate}${showAccount ? ` · ${accountName.get(t.accountId)}` : ""} · ${MARKET_LABEL[t.market]}`}
               value={fmtPrice(f.amount, f.currency)}
               rows={rows}

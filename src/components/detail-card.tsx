@@ -8,10 +8,11 @@ export type DetailRow = [label: string, value: React.ReactNode, className?: stri
  *   제목 (+보조 설명)            큰 값
  *   이름표 ............................ 값
  *   이름표 ............................ 값
- * 한 줄에 몰아넣지 않고 항목마다 줄을 나눠 숫자가 잘리지 않게 한다. 긴 이름은 자르지 않고 줄바꿈한다.
+ * 한 줄에 몰아넣지 않고 항목마다 줄을 나눠 숫자가 잘리지 않게 한다. 긴 이름은 한 줄에서 …으로 줄인다.
  */
 export function DetailCard({
   title,
+  badge,
   sub,
   href,
   value,
@@ -20,7 +21,10 @@ export function DetailCard({
   actions,
   to,
 }: {
-  title: React.ReactNode;
+  /** 이름. 길면 한 줄에서 …으로 줄인다 (전체 이름은 title 툴팁) */
+  title: string;
+  /** 이름 앞의 작은 표시 (매수/매도 등) */
+  badge?: React.ReactNode;
   sub?: React.ReactNode;
   /** 제목을 누르면 갈 곳 (종목 화면 등) */
   href?: string;
@@ -35,23 +39,33 @@ export function DetailCard({
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {href ? (
-            <Link href={href} className="block break-words text-sm font-medium [word-break:keep-all] hover:text-brand hover:underline" data-wrap="ok">
-              {title}
-            </Link>
-          ) : (
-            <div className="break-words text-sm font-medium [word-break:keep-all]" data-wrap="ok">{title}</div>
-          )}
-          {sub && <div className="mt-0.5 truncate text-xs text-muted">{sub}</div>}
+        {/* 왼쪽(이름)은 남는 폭만 쓰고 넘치면 …, 오른쪽(값)은 줄어들지 않는다 → 서로 겹치지 않음 */}
+        <div className="min-w-0 flex-1" data-slot="left">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {badge}
+            {href ? (
+              <Link href={href} title={title} className="min-w-0 truncate text-sm font-medium hover:text-brand hover:underline">
+                {title}
+              </Link>
+            ) : (
+              <span title={title} className="min-w-0 truncate text-sm font-medium">
+                {title}
+              </span>
+            )}
+          </div>
+          {sub && <div className="mt-0.5 truncate text-xs text-muted" title={typeof sub === "string" ? sub : undefined}>{sub}</div>}
         </div>
-        <span className={`shrink-0 whitespace-nowrap text-base font-semibold ${valueClass}`}>{value}</span>
+        <span className={`shrink-0 whitespace-nowrap text-base font-semibold ${valueClass}`} data-slot="right">
+          {value}
+        </span>
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         {rows.map(([label, v, cls = ""]) => (
           <div key={label} className="contents">
-            <dt className="text-muted">{label}</dt>
-            <dd className={`text-right ${cls}`}>{v}</dd>
+            <dt className="whitespace-nowrap text-muted">{label}</dt>
+            <dd className={`min-w-0 truncate text-right ${cls}`} title={typeof v === "string" ? v : undefined}>
+              {v}
+            </dd>
           </div>
         ))}
       </dl>
