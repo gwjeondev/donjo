@@ -14,7 +14,7 @@ export const ACCOUNT_SORTS = {
 } as const;
 export type AccountSortKey = keyof typeof ACCOUNT_SORTS;
 
-/** 보유종목 정렬 기준 (대시보드·계좌 상세 공통) */
+/** 보유종목 정렬 기준 (종목 화면·계좌 상세 공통) */
 export const HOLDING_SORTS = {
   value: "평가금액",
   returnRate: "수익률",

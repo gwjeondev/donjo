@@ -31,7 +31,7 @@ export function SortSettings({ initial }: { initial: Prefs }) {
     <div className="space-y-3">
       {row("계좌 목록", <SortControl label="계좌 목록 정렬" options={ACCOUNT_SORTS} value={prefs.accounts} onChange={(accounts) => update({ ...prefs, accounts })} />)}
       {row(
-        "보유 종목 (대시보드·계좌)",
+        "보유 종목 (종목·계좌 상세)",
         <SortControl label="보유 종목 정렬" options={HOLDING_SORTS} value={prefs.holdings} onChange={(holdings) => update({ ...prefs, holdings })} />,
       )}
       {row(

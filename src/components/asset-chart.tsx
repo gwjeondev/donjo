@@ -31,7 +31,7 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
   const periodReturn = base && last && 1 + base.cum > 0 ? (1 + last.cum) / (1 + base.cum) - 1 : 0;
 
   return (
-    <div className="card flex h-full flex-col p-5">
+    <div className="card flex flex-col p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="font-semibold">
@@ -61,7 +61,7 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
           {failed ? "자산 추이를 불러오지 못했어요. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없어요"}
         </p>
       ) : (
-        <div className="h-60 min-h-60 xl:h-auto xl:flex-1" /* 옆 카드(자산 비중)가 더 길면 그 높이만큼 늘어난다 */>
+        <div className="h-60 sm:h-72">
           <ResponsiveContainer>
             <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <defs>

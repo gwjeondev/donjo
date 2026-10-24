@@ -36,7 +36,7 @@ export const useDisplayCurrency = () => useContext(Ctx);
 export function CurrencyToggle() {
   const { currency, setCurrency } = useDisplayCurrency();
   return (
-    <div role="radiogroup" aria-label="해외 종목 표시 통화" title="해외 종목 표시 통화" className="flex shrink-0 rounded-lg bg-surface-2 p-0.5 text-xs">
+    <div role="radiogroup" aria-label="해외 종목 표시 통화" title="해외 종목 표시 통화" className="ml-auto flex shrink-0 rounded-lg bg-surface-2 p-0.5 text-xs" /* 어느 화면이든 오른쪽 (줄이 바뀌어도) */>
       {(["KRW", "USD"] as const).map((c) => (
         <button
           key={c}

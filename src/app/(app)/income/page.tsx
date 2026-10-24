@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { DividendList, TaxSaleList } from "@/components/income-lists";
-import { RealizedList } from "@/components/realized-list";
+import { TaxSaleList } from "@/components/income-lists";
+import { DividendList, RealizedList } from "@/components/income-money-lists";
 import { CurrencyToggle } from "@/components/currency";
 import { FilterRow, StatCard } from "@/components/filter-row";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
@@ -200,8 +200,8 @@ function IncomeView({
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-semibold">{tab === "realized" ? `매도 내역 ${events.length}건` : `배당 내역 ${dividends.length}건`}</h2>
-          {/* 해외 매도 내역은 원화/달러로 볼 수 있다 (합계 카드는 원화) */}
-          {tab === "realized" && events.some((e) => e.currency === "USD") && <CurrencyToggle />}
+          {/* 해외 종목 내역은 원화/달러로 볼 수 있다 (합계 카드는 원화) */}
+          {(tab === "realized" ? events.some((e) => e.currency === "USD") : dividends.some((d) => d.market === "US")) && <CurrencyToggle />}
         </div>
         {tab === "realized" ? (
           events.length === 0 ? (
@@ -212,7 +212,7 @@ function IncomeView({
         ) : dividends.length === 0 ? (
           <p className="card p-8 text-center text-sm text-muted">이 기간에 받은 배당금이 없어요. 오른쪽 위 ‘배당’으로 추가해 보세요.</p>
         ) : (
-          <DividendList dividends={dividends} accountName={accountName} showAccount={!account} />
+          <DividendList dividends={dividends} accountName={Object.fromEntries(accountName)} showAccount={!account} />
         )}
         <p className="text-xs leading-relaxed text-muted">
           실현손익 = 매도 대금(수수료·세금 뺀 금액) − 판 수량의 평균 매입금액. 해외 주식은 매도일 환율과 매수일 환율로 원화 환산해요. 달러로 보면 환율 영향을 뺀 달러 기준 손익·수익률이에요. 배당금은 세후

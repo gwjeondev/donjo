@@ -16,12 +16,31 @@ function fallbackOf(path: string) {
 
 type Entry = { path: string; root: boolean };
 
+function write(stack: Entry[]) {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(stack.slice(-30)));
+  } catch {}
+}
+
+/** 방금 뒤로 가기였다는 표시 (잠깐만 유효: 남아 있다가 다음 이동을 뒤로 가기로 착각하지 않게) */
+function markPop() {
+  try {
+    sessionStorage.setItem(POP_FLAG, String(Date.now()));
+  } catch {}
+}
+
 function read(): Entry[] {
   try {
     return JSON.parse(sessionStorage.getItem(KEY) ?? "[]");
   } catch {
     return [];
   }
+}
+
+function view(stack: Entry[], path: string) {
+  const cur = stack.at(-1);
+  const fallback = fallbackOf(path);
+  return { back: (!!cur && !cur.root && stack.length > 1) || !!fallback, fallback };
 }
 
 /**
@@ -44,11 +63,15 @@ export function PageBack() {
         } catch {}
       }
     };
-    // 뒤로·앞으로 가기(브라우저 버튼, router.back)는 popstate로 알 수 있다
+    // 브라우저 뒤로 가기: Next가 화면을 먼저 바꿔서 아래 기록 갱신이 '앞으로 이동'으로 쌓였으면([.., A, B, A]) 되돌린다
     const onPop = () => {
-      try {
-        sessionStorage.setItem(POP_FLAG, "1");
-      } catch {}
+      const stack = read();
+      const here = window.location.pathname;
+      if (stack.length >= 3 && stack.at(-1)!.path === here && stack.at(-3)!.path === here) {
+        const next = stack.slice(0, -2);
+        write(next);
+        setShow(view(next, here));
+      } else markPop();
     };
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPop);
@@ -64,23 +87,19 @@ export function PageBack() {
     let popped = false;
     try {
       fromMenu = sessionStorage.getItem(ROOT_FLAG) === "1";
-      popped = sessionStorage.getItem(POP_FLAG) === "1";
+      popped = Date.now() - Number(sessionStorage.getItem(POP_FLAG) ?? 0) < 1500;
       sessionStorage.removeItem(ROOT_FLAG);
       sessionStorage.removeItem(POP_FLAG);
     } catch {}
     const top = stack.at(-1);
     if (!top) stack = [{ path, root: !fallbackOf(path) }];
-    else if (fromMenu) stack = [...stack, { path, root: true }].slice(-30); // 메뉴로 연 화면은 첫 화면 (브라우저 뒤로 가기는 그대로 맞도록 기록은 이어 둔다)
+    else if (fromMenu) stack = [...stack, { path, root: true }]; // 메뉴로 연 화면은 첫 화면 (브라우저 뒤로 가기는 그대로 맞도록 기록은 이어 둔다)
     else if (top.path === path) {
       // 새로고침
     } else if (popped && stack.at(-2)?.path === path) stack = stack.slice(0, -1); // 뒤로 가기 (링크로 같은 화면에 다시 가는 건 앞으로 쌓는다)
-    else stack = [...stack, { path, root: false }].slice(-30);
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify(stack));
-    } catch {}
-    const cur = stack.at(-1)!;
-    const fallback = fallbackOf(path);
-    setShow({ back: (!cur.root && stack.length > 1) || !!fallback, fallback });
+    else stack = [...stack, { path, root: false }];
+    write(stack);
+    setShow(view(stack, path));
   }, [path]);
 
   if (!show.back) return null;
@@ -90,8 +109,10 @@ export function PageBack() {
       className="mb-2 inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
       onClick={() => {
         const stack = read();
-        if (stack.length > 1 && !stack.at(-1)!.root) router.back();
-        else router.push(show.fallback ?? "/dashboard");
+        if (stack.length > 1 && !stack.at(-1)!.root) {
+          markPop();
+          router.back();
+        } else router.push(show.fallback ?? "/dashboard");
       }}
     >
       ← 뒤로

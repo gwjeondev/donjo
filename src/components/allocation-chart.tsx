@@ -21,7 +21,7 @@ function fold(slices: Slice[]) {
   return [...sorted.slice(0, SLOTS), { key: "__other", label: `기타 ${rest.length}개`, value: rest.reduce((s, x) => s + x.value, 0) }];
 }
 
-export function AllocationChart({ groups }: { groups: { id: string; label: string; slices: Slice[] }[] }) {
+export function AllocationChart({ title = "자산 비중", groups }: { title?: string; groups: { id: string; label: string; slices: Slice[] }[] }) {
   const [groupId, setGroupId] = useState(groups[0]?.id);
   const group = groups.find((g) => g.id === groupId) ?? groups[0];
   const data = fold(group?.slices ?? []);
@@ -30,18 +30,20 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
   return (
     <div className="card @container p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-semibold">자산 비중</h2>
-        <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
-          {groups.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setGroupId(g.id)}
-              className={`rounded-md px-2.5 py-1 font-medium ${g.id === group?.id ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
+        <h2 className="font-semibold">{title}</h2>
+        {groups.length > 1 && (
+          <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGroupId(g.id)}
+                className={`rounded-md px-2.5 py-1 font-medium ${g.id === group?.id ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {total === 0 ? (
         <p className="py-12 text-center text-sm text-muted">데이터가 없어요</p>
@@ -85,7 +87,9 @@ export function AllocationChart({ groups }: { groups: { id: string; label: strin
             {data.map((d, i) => (
               <li key={d.key} className="flex items-center gap-2">
                 <span className="size-2.5 shrink-0 rounded-sm" style={{ background: color(d.key === "__other" ? SLOTS : i) }} />
-                <span className="min-w-0 flex-1 truncate text-ink-2" title={d.label}>{d.label}</span>
+                <span className="min-w-0 flex-1 truncate text-ink-2" title={d.label}>
+                  {d.label}
+                </span>
                 <span className="font-medium">{fmtPct(d.value / total, false)}</span>
               </li>
             ))}
