@@ -67,7 +67,7 @@ export default async function IncomePage({
 
   return (
     <>
-      <PageHeader title="손익" sub="매도로 확정된 손익, 받은 배당금, 해외주식 양도세 예상액이에요. 배당 등록은 거래내역에서 해요" />
+      <PageHeader title="손익" sub="매도로 확정된 손익, 받은 배당금, 해외주식 양도세 예상액이에요." />
       <div className="space-y-5">
         {tabs}
         {tab === "tax" ? (
@@ -210,7 +210,7 @@ function IncomeView({
             <RealizedList events={events} accountName={Object.fromEntries(accountName)} showAccount={!account} />
           )
         ) : dividends.length === 0 ? (
-          <p className="card p-8 text-center text-sm text-muted">이 기간에 받은 배당금이 없어요. 오른쪽 위 ‘배당’으로 추가해 보세요.</p>
+          <p className="card p-8 text-center text-sm text-muted">이 기간에 받은 배당금이 없어요.</p>
         ) : (
           <DividendList dividends={dividends} accountName={Object.fromEntries(accountName)} showAccount={!account} />
         )}
