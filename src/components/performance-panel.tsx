@@ -1,59 +1,61 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import { BenchmarkChart } from "@/components/benchmark-chart";
 import { PerformanceView } from "@/components/performance-view";
 import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
-import { RANGE_IDS, rangeBounds, sliceRange, type RangeId } from "@/lib/range";
+import { RANGE_IDS, rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 
 const RANGE_LABEL: Record<RangeId, string> = { "1M": "1M", "3M": "3M", YTD: "YTD", "1Y": "1Y", 전체: "전체", 직접: "직접입력" };
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const dot = (d: string) => d.replaceAll("-", ".");
 
-/** 조회 기간을 고르면 시장 비교 차트와 기간별 수익률에 함께 적용한다. 새로고침해도 유지되도록 주소(?range=&from=&to=)에 남긴다 */
+/**
+ * 조회 기간을 고르면 주소(?range=&from=&to=)를 바꿔 서버가 그 기간의 데이터만 새로 계산한다.
+ * 시장 비교 차트와 기간별 수익률에 함께 적용한다.
+ */
 export function PerformancePanel({
+  range: initialRange,
+  custom: initialCustom,
+  firstTrade,
   daily,
   benchmark,
   missing,
   failed,
 }: {
+  range: RangeId;
+  custom: { from?: string; to?: string };
+  firstTrade?: string;
   daily: DailyPoint[];
   benchmark: BenchmarkPoint[];
   missing: string[];
   failed: boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
-  const initial = params.get("range") === "custom" ? "직접" : params.get("range");
-  const [range, setRange] = useState<RangeId>(RANGE_IDS.includes(initial as RangeId) ? (initial as RangeId) : "전체");
-  const [custom, setCustom] = useState(() => {
-    const valid = (k: string) => (DATE.test(params.get(k) ?? "") ? params.get(k)! : undefined);
-    return { from: valid("from"), to: valid("to") };
-  });
+  const [pending, startTransition] = useTransition();
+  // 누르자마자 버튼이 바뀌도록 화면 상태를 먼저 바꾸고, 데이터는 뒤따라 받는다
+  const [range, setRange] = useState(initialRange);
+  const [custom, setCustom] = useState(initialCustom);
 
-  const first = daily[0]?.date;
+  const first = firstTrade ?? daily[0]?.date;
   const last = daily.at(-1)?.date;
 
-  const save = (r: RangeId, c: { from?: string; to?: string }) => {
-    const next = new URLSearchParams(window.location.search);
+  const go = (r: RangeId, c: { from?: string; to?: string }) => {
+    setRange(r);
+    setCustom(c);
+    const next = new URLSearchParams(params);
     for (const k of ["range", "from", "to"]) next.delete(k);
-    if (r !== "전체") next.set("range", r === "직접" ? "custom" : r);
-    if (r === "직접") for (const k of ["from", "to"] as const) if (c[k]) next.set(k, c[k]!);
-    const qs = next.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    for (const [k, v] of Object.entries(rangeQuery(r, c))) next.set(k, v);
+    startTransition(() => router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false }));
   };
   const pick = (r: RangeId) => {
     // 직접입력을 처음 열면 올해 1월 1일 ~ 오늘로 채워 둔다
     const c = r === "직접" && !custom.from && !custom.to && last ? { from: rangeBounds("YTD", last).from, to: last } : custom;
-    setRange(r);
-    setCustom(c);
-    save(r, c);
+    go(r, c);
   };
-  const edit = (k: "from" | "to", v: string) => {
-    const c = { ...custom, [k]: v || undefined };
-    setCustom(c);
-    save(range, c);
-  };
+  const edit = (k: "from" | "to", v: string) => go(range, { ...custom, [k]: v || undefined });
 
   const view = useMemo(() => {
     const { from, to } = last ? rangeBounds(range, last, custom) : {};
@@ -65,7 +67,7 @@ export function PerformancePanel({
   const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" aria-busy={pending}>
       {daily.length >= 2 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex w-full rounded-lg bg-surface-2 p-0.5 text-xs sm:w-fit" role="group" aria-label="조회 기간">
@@ -113,7 +115,7 @@ export function PerformancePanel({
           선택한 기간에는 기록이 없어요. {first && last && `${dot(first)} ~ ${dot(last)} 사이로 골라 주세요.`}
         </p>
       ) : (
-        <>
+        <div className={`space-y-4 transition-opacity ${pending ? "opacity-50" : ""}`}>
           <BenchmarkChart
             points={daily.length >= 2 ? view.benchmark : benchmark}
             base={view.base}
@@ -125,7 +127,7 @@ export function PerformancePanel({
             startValue={view.startValue}
             failed={failed}
           />
-        </>
+        </div>
       )}
     </div>
   );

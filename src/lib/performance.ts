@@ -47,6 +47,8 @@ export function buildDailySeries(
   today: string,
   /** 날짜별 받은 배당금 (세후, 원화). 계좌 밖으로 나간 돈으로 보고 그날 손익에 더한다 */
   dividends: Map<string, number> = new Map(),
+  /** 이 날짜부터만 평가금액을 계산한다 (그 전 매매는 보유 수량만 따라간다). 짧은 기간을 빨리 보여 주기 위해 */
+  valuesFrom?: string,
 ): DailyPoint[] {
   const sorted = sortTrades(trades);
   if (sorted.length === 0) return [];
@@ -89,6 +91,7 @@ export function buildDailySeries(
       }
       lastTradePrice.set(t.symbol, t.price);
     }
+    if (valuesFrom && date < valuesFrom) continue;
     // 주말은 거래가 없으면 건너뛴다 (값이 변하지 않음)
     if (isWeekend(date) && !hasTrade && date !== today) continue;
 

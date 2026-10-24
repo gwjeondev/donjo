@@ -31,3 +31,29 @@ export function sliceRange<T extends { date: string }>(points: T[], from?: strin
 }
 
 export type { DailyPoint };
+
+/** 기본 조회 기간: 짧을수록 계산할 시세가 적어 화면이 빨리 뜬다 */
+export const DEFAULT_RANGE: RangeId = "1M";
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** 주소 → 조회 기간. ?range=1M|3M|YTD|1Y|all|custom&from=&to= (없으면 기본 1M) */
+export function parseRange(params: { range?: string; from?: string; to?: string }) {
+  const raw = params.range === "custom" ? "직접" : params.range === "all" ? "전체" : params.range;
+  const range: RangeId = RANGE_IDS.includes(raw as RangeId) ? (raw as RangeId) : DEFAULT_RANGE;
+  const custom = {
+    from: params.from && DATE.test(params.from) ? params.from : undefined,
+    to: params.to && DATE.test(params.to) ? params.to : undefined,
+  };
+  return { range, custom };
+}
+
+/** 조회 기간 → 주소 쿼리 (기본값은 생략) */
+export function rangeQuery(range: RangeId, custom: { from?: string; to?: string }) {
+  const q: Record<string, string> = {};
+  if (range !== DEFAULT_RANGE) q.range = range === "직접" ? "custom" : range === "전체" ? "all" : range;
+  if (range === "직접") {
+    if (custom.from) q.from = custom.from;
+    if (custom.to) q.to = custom.to;
+  }
+  return q;
+}

@@ -5,7 +5,7 @@ import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
-import { benchmarkSeries, buildDailySeries, type DailyPoint } from "./performance";
+import { addDays, benchmarkSeries, buildDailySeries, type DailyPoint } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
 const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC", nasdaq100: "^NDX" } as const;
@@ -94,9 +94,13 @@ export async function loadPortfolio(userId: string, accountId?: string) {
 }
 
 /** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */
-export async function loadPerformance(userId: string, accountId?: string) {
+/**
+ * from을 주면 그 날짜 부근부터만 시세를 받아 계산한다 (수익률 화면의 1M 등 짧은 기간을 빨리 보여 주기 위해).
+ * 수익률은 기간 안의 일별 수익률을 이어 곱하므로 그 이전 시세는 필요 없다.
+ */
+export async function loadPerformance(userId: string, accountId?: string, from?: string) {
   try {
-    return { ...(await computePerformance(userId, accountId)), failed: false };
+    return { ...(await computePerformance(userId, accountId, from)), failed: false };
   } catch (e) {
     console.error("[performance] 계산 실패:", e);
     return { ...EMPTY_PERFORMANCE, failed: true };
@@ -107,21 +111,33 @@ const EMPTY_PERFORMANCE = {
   daily: [] as DailyPoint[],
   benchmark: [] as ReturnType<typeof benchmarkSeries>,
   benchmarkMissing: [] as string[],
+  /** 첫 거래일 (직접입력 날짜 범위용) */
+  firstTrade: undefined as string | undefined,
 };
 
-async function computePerformance(userId: string, accountId?: string) {
+async function computePerformance(userId: string, accountId?: string, rangeFrom?: string) {
   const [trades, dividends] = await Promise.all([loadTrades(userId, accountId), loadDividends(userId, accountId)]);
   if (trades.length === 0) return EMPTY_PERFORMANCE;
-  const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
-  const prices = await getPriceSeries([...trades.map((t) => t.symbol), ...Object.values(BENCHMARKS)], from);
+  const firstTrade = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
+  // 기간 시작 직전 거래일(수익률 0% 기준점)이 들어가도록 일주일 앞부터 계산한다
+  const valuesFrom = rangeFrom && rangeFrom > firstTrade ? addDays(rangeFrom, -7) : undefined;
+  const from = valuesFrom ?? firstTrade;
+  // 그 시점에 보유 중이었거나 그 뒤에 거래한 종목만 시세가 필요하다
+  const symbols = valuesFrom
+    ? [
+        ...computePositions(trades.filter((t) => t.tradeDate < valuesFrom)).filter((p) => p.quantity > 0).map((p) => p.symbol),
+        ...trades.filter((t) => t.tradeDate >= valuesFrom).map((t) => t.symbol),
+      ]
+    : trades.map((t) => t.symbol);
+  const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from);
   const today = todayStr();
   // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다
-  const quotes = await getQuotes([...new Set(trades.map((t) => t.symbol)), "KRW=X"]);
+  const quotes = await getQuotes([...new Set(symbols), "KRW=X"]);
   for (const [s, q] of quotes) {
     if (!prices.has(s)) prices.set(s, new Map());
     prices.get(s)!.set(today, q.price);
   }
-  const daily = buildDailySeries(trades, prices, today, dividendsByDate(dividends));
+  const daily = buildDailySeries(trades, prices, today, dividendsByDate(dividends), valuesFrom);
   const benchmark = benchmarkSeries(
     daily,
     Object.fromEntries(Object.entries(BENCHMARKS).map(([k, sym]) => [k, prices.get(sym) ?? new Map<string, number>()])),
@@ -130,5 +146,5 @@ async function computePerformance(userId: string, accountId?: string) {
   const benchmarkMissing = Object.entries(BENCHMARKS)
     .filter(([, sym]) => !(prices.get(sym)?.size))
     .map(([k]) => k);
-  return { daily, benchmark, benchmarkMissing };
+  return { daily, benchmark, benchmarkMissing, firstTrade };
 }
