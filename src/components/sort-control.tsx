@@ -10,19 +10,22 @@ export function SortControl<K extends string>({
   onChange,
   label = "정렬",
   className = "",
+  fill = false,
 }: {
   options: Record<K, string>;
   value: Sort<K>;
   onChange: (next: Sort<K>) => void;
   label?: string;
   className?: string;
+  /** 정해진 폭(className) 안을 select가 채운다 (설정 화면처럼 여러 줄의 폭을 맞출 때) */
+  fill?: boolean;
 }) {
   const flip: SortDir = value.dir === "desc" ? "asc" : "desc";
   return (
     <div className={`flex shrink-0 items-center gap-1 ${className}`}>
       <select
         aria-label={`${label} 기준`}
-        className="input w-auto shrink-0 py-1.5 pr-7 text-sm"
+        className={`input py-1.5 pr-7 text-sm ${fill ? "min-w-0 flex-1" : "w-auto shrink-0"}`}
         value={value.key}
         onChange={(e) => {
           const key = e.target.value as K;

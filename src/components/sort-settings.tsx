@@ -20,23 +20,26 @@ export function SortSettings({ initial }: { initial: Prefs }) {
     });
   };
 
+  // 오른쪽 조작부는 모두 같은 폭이라 줄마다 왼쪽·오른쪽 끝이 맞는다
+  const W = "w-40 sm:w-60";
   const row = (label: string, control: React.ReactNode) => (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-      <span className="text-sm text-ink-2">{label}</span>
-      {control}
+      <span className="min-w-0 text-sm text-ink-2">{label}</span>
+      {/* 좁아서 다음 줄로 내려가도 오른쪽에 */}
+      <div className="ml-auto">{control}</div>
     </div>
   );
 
   return (
     <div className="space-y-3">
-      {row("계좌 목록", <SortControl label="계좌 목록 정렬" options={ACCOUNT_SORTS} value={prefs.accounts} onChange={(accounts) => update({ ...prefs, accounts })} />)}
+      {row("계좌 목록", <SortControl fill className={W} label="계좌 목록 정렬" options={ACCOUNT_SORTS} value={prefs.accounts} onChange={(accounts) => update({ ...prefs, accounts })} />)}
       {row(
-        "보유 종목 (종목·계좌 상세)",
-        <SortControl label="보유 종목 정렬" options={HOLDING_SORTS} value={prefs.holdings} onChange={(holdings) => update({ ...prefs, holdings })} />,
+        "보유 종목",
+        <SortControl fill className={W} label="보유 종목 정렬" options={HOLDING_SORTS} value={prefs.holdings} onChange={(holdings) => update({ ...prefs, holdings })} />,
       )}
       {row(
         "거래 내역",
-        <div role="radiogroup" aria-label="거래 내역 정렬" className="flex rounded-lg bg-surface-2 p-0.5 text-sm">
+        <div role="radiogroup" aria-label="거래 내역 정렬" className={`${W} flex shrink-0 rounded-lg bg-surface-2 p-0.5 text-sm`}>
           {(["new", "old"] as const).map((o) => (
             <button
               key={o}
@@ -44,7 +47,7 @@ export function SortSettings({ initial }: { initial: Prefs }) {
               role="radio"
               aria-checked={prefs.trades === o}
               onClick={() => update({ ...prefs, trades: o })}
-              className={`rounded-md px-3 py-1.5 font-medium ${prefs.trades === o ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
+              className={`flex-1 rounded-md px-3 py-1.5 font-medium ${prefs.trades === o ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
             >
               {o === "new" ? "최신순" : "오래된순"}
             </button>
