@@ -60,11 +60,17 @@ export function PerformancePanel({
   };
 
   const view = useMemo(() => {
-    const { from, to } = last ? rangeBounds(range, last, custom) : {};
+    // 받아 둔 데이터는 처음 고른 기간 부근부터만 있다. 더 긴 기간을 고르면 새 데이터가 올 때까지
+    // 잘린 값(예: 3M인데 1M치 수익률)을 보여 주지 않고 이전 기간 화면을 그대로 둔다 (그동안 로딩 효과)
+    const wanted = last ? rangeBounds(range, last, custom) : {};
+    const start = daily[0]?.date;
+    const need = wanted.from && first && wanted.from > first ? wanted.from : first;
+    const covered = !start || !need || start <= need;
+    const { from, to } = covered ? wanted : last ? rangeBounds(initialRange, last, initialCustom) : {};
     const d = sliceRange(daily, from, to);
     const b = sliceRange(benchmark, from, to);
     return { from, to, daily: d.points, startValue: d.before?.value ?? 0, benchmark: b.points, base: b.before };
-  }, [daily, benchmark, range, custom, last]);
+  }, [daily, benchmark, range, custom, last, first, initialRange, initialCustom]);
 
   const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
 
