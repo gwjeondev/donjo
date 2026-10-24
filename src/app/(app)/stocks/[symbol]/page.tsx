@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { RenameStockButton } from "@/components/rename-stock";
 import { AccountBreakdown, StockPriceChart, StockSummary, type PricePoint } from "@/components/stock-detail";
+import { BackLink } from "@/components/back-link";
 import { AddTradeButton } from "@/components/trade-form";
 import { TradeList } from "@/components/trade-list";
 import { loadPortfolio } from "@/lib/data";
@@ -49,7 +49,7 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
 
   return (
     <>
-      <Link href="/dashboard" className="text-sm text-ink-2 hover:text-ink">← 대시보드</Link>
+      <BackLink fallback="/stocks" />
       <div className="mt-2">
         <PageHeader
           title={position.name}

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { InfoIcon, LogoutIcon, SettingsIcon } from "@/components/icons";
 import { BottomNav, SideNav } from "@/components/nav";
+import { VisitTracker } from "@/components/back-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencyProvider } from "@/components/currency";
 import { prisma } from "@/lib/db";
@@ -59,6 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <BottomNav />
+      <VisitTracker />
     </div>
   );
 }
