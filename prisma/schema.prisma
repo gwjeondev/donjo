@@ -29,6 +29,7 @@ model Account {
   createdAt    DateTime      @default(now())
   transactions Transaction[]
   dividends    Dividend[]
+  cashFlows    CashFlow[]
 
   @@index([userId])
 }
@@ -86,6 +87,34 @@ model Dividend {
   createdAt DateTime @default(now())
 
   @@index([accountId, payDate])
+}
+
+enum CashType {
+  DEPOSIT
+  WITHDRAW
+  EXCHANGE
+}
+
+enum Currency {
+  KRW
+  USD
+}
+
+/// 현금 입출금·환전. 환전은 currency(보낸 통화)의 amount를 fxRate(원/USD)로 바꾼다.
+model CashFlow {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type      CashType
+  currency  Currency
+  amount    Decimal  @db.Decimal(20, 4)
+  /// 환전·달러 입출금의 환율 (1 USD 당 KRW). 원화 입출금은 1.
+  fxRate    Decimal  @default(1) @db.Decimal(20, 4)
+  date      DateTime @db.Date
+  memo      String?
+  createdAt DateTime @default(now())
+
+  @@index([accountId, date])
 }
 
 /// 일별 종가 캐시 (환율 KRW=X 포함)
