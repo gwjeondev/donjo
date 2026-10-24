@@ -8,7 +8,7 @@ const ITEMS = [
   { href: "/dashboard", label: "대시보드", Icon: HomeIcon },
   { href: "/stocks", label: "종목", Icon: StockIcon },
   { href: "/accounts", label: "계좌", Icon: WalletIcon },
-  { href: "/transactions", label: "매매기록", Icon: ListIcon },
+  { href: "/transactions", label: "거래내역", Icon: ListIcon },
   { href: "/performance", label: "수익률", Icon: ChartIcon },
   { href: "/income", label: "손익", Icon: CoinIcon },
 ];

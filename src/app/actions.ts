@@ -296,6 +296,53 @@ export async function deleteDividend(id: string): Promise<FormState> {
   return count ? { ok: true } : { error: "배당 기록을 찾을 수 없어요" };
 }
 
+// ---------- 현금 입출금·환전 ----------
+
+const cashSchema = z.object({
+  accountId: z.string().min(1, "계좌를 선택하세요"),
+  type: z.enum(["DEPOSIT", "WITHDRAW", "EXCHANGE"]),
+  currency: z.enum(["KRW", "USD"]),
+  amount: num("금액을 입력하세요").positive("금액은 0보다 커야 해요"),
+  fxRate: num("환율이 올바르지 않아요").positive("환율을 입력하세요"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "날짜를 입력하세요"),
+  memo: z.string().max(200).optional(),
+});
+
+export async function saveCashFlow(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const type = str(form, "type");
+  const parsed = cashSchema.safeParse({
+    accountId: str(form, "accountId"),
+    type,
+    currency: str(form, "currency"),
+    amount: str(form, "amount").replaceAll(",", ""),
+    // 환율은 환전에만 쓴다
+    fxRate: type === "EXCHANGE" ? str(form, "fxRate").replaceAll(",", "") : 1,
+    date: str(form, "date"),
+    memo: str(form, "memo") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const data = parsed.data;
+  const account = await prisma.account.findFirst({ where: { id: data.accountId, userId } });
+  if (!account) return { error: "계좌를 찾을 수 없어요" };
+  const record = { ...data, date: new Date(`${data.date}T00:00:00Z`) };
+  const id = str(form, "id");
+  if (id) {
+    const own = await prisma.cashFlow.findFirst({ where: { id, account: { userId } } });
+    if (!own) return { error: "현금 기록을 찾을 수 없어요" };
+    await prisma.cashFlow.update({ where: { id }, data: record });
+  } else {
+    await prisma.cashFlow.create({ data: record });
+  }
+  return { ok: true };
+}
+
+export async function deleteCashFlow(id: string): Promise<FormState> {
+  const userId = await requireUserId();
+  const { count } = await prisma.cashFlow.deleteMany({ where: { id, account: { userId } } });
+  return count ? { ok: true } : { error: "현금 기록을 찾을 수 없어요" };
+}
+
 // ---------- 시세 ----------
 
 /** 보유 종목과 환율 시세를 다시 받아 온다. 외부 API·DB 부담을 줄이려고 1분 이내 시세는 그대로 쓴다 */
@@ -319,15 +366,15 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   if (!(file instanceof File) || file.size === 0) return { error: "CSV 파일을 선택하세요" };
   if (file.size > MAX_IMPORT_BYTES) return { error: "파일이 너무 커요 (최대 2MB)" };
 
-  const { rows: parsed, errors } = fromCsv(await file.text());
+  const { rows: parsed, dividends: parsedDivs, cash: parsedCash, errors } = fromCsv(await file.text());
   if (errors.length) {
     return { error: errors.slice(0, 5).join("\n") + (errors.length > 5 ? `\n외 ${errors.length - 5}건` : "") };
   }
-  if (parsed.length === 0) return { error: "가져올 기록이 없어요" };
+  if (parsed.length + parsedDivs.length + parsedCash.length === 0) return { error: "가져올 기록이 없어요" };
 
   const accounts = await prisma.account.findMany({ where: { userId } });
   const accountId = new Map(accounts.map((a) => [a.name, a.id]));
-  const newAccounts = [...new Set(parsed.map((r) => r.account))].filter((n) => !accountId.has(n));
+  const newAccounts = [...new Set([...parsed, ...parsedDivs, ...parsedCash].map((r) => r.account))].filter((n) => !accountId.has(n));
   // 검증 단계에서 쓸 임시 ID (저장할 때 실제 ID로 바꾼다)
   newAccounts.forEach((n) => accountId.set(n, `new:${n}`));
 
@@ -353,7 +400,12 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
   const officialName = await getKoreanNames(englishKr).catch(() => new Map<string, string>());
 
   // 미국 주식의 빈 환율은 거래일(휴장일이면 직전 거래일) 원/달러 환율로 채운다
-  const fxDates = [...new Set(rows.filter((r) => r.market === "US" && !r.fxRate).map((r) => r.tradeDate))];
+  const fxDates = [
+    ...new Set([
+      ...rows.filter((r) => r.market === "US" && !r.fxRate).map((r) => r.tradeDate),
+      ...parsedDivs.filter((d) => d.market === "US" && !d.fxRate).map((d) => d.payDate),
+    ]),
+  ];
   const fxOn = new Map<string, number>();
   if (fxDates.length) {
     const from = addDays(fxDates.reduce((m, d) => (d < m ? d : m)), -10);
@@ -403,11 +455,57 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       }
       return true;
     });
-  const skipped = rows.length - candidates.length;
-  if (candidates.length === 0) return { ok: true, message: `새로 추가할 기록이 없어요 (중복 ${skipped}건 건너뜀)` };
+  // 배당: 그 계좌에서 거래한(기존 또는 이번 파일) 종목만. 종목코드로 저장된 심볼을 찾는다
+  const tradedIn = new Map<string, { symbol: string; name: string; market: Trade["market"] }>();
+  for (const t of [...existing, ...candidates]) tradedIn.set(`${t.accountId}|${t.symbol.replace(/\.(KS|KQ)$/, "")}`, t);
+  const [existingDivs, existingCash] = await Promise.all([
+    prisma.dividend.findMany({ where: { account: { userId } } }),
+    prisma.cashFlow.findMany({ where: { account: { userId } } }),
+  ]);
+  const countOf = (keys: string[]) => {
+    const m = new Map<string, number>();
+    for (const k of keys) m.set(k, (m.get(k) ?? 0) + 1);
+    return m;
+  };
+  const takeNew = <T,>(items: T[], keyOf: (x: T) => string, have: Map<string, number>) =>
+    items.filter((x) => {
+      const left = have.get(keyOf(x)) ?? 0;
+      if (left > 0) {
+        have.set(keyOf(x), left - 1);
+        return false;
+      }
+      return true;
+    });
+  const divProblems: string[] = [];
+  const divRows = parsedDivs.flatMap((d) => {
+    const acct = accountId.get(d.account)!;
+    const t = tradedIn.get(`${acct}|${d.symbol}`);
+    if (!t) {
+      divProblems.push(`${d.payDate} ${d.name || d.symbol}: '${d.account}' 계좌에서 거래한 종목이 아니에요`);
+      return [];
+    }
+    return [{ accountId: acct, symbol: t.symbol, name: t.name, market: t.market, amount: d.amount, tax: d.tax, fxRate: t.market === "US" ? d.fxRate || fxOn.get(d.payDate)! : 1, payDate: d.payDate, memo: d.memo || null }];
+  });
+  if (divProblems.length) return { error: `배당 기록을 가져올 수 없어요\n${divProblems.slice(0, 5).join("\n")}` };
+  const divKey = (d: { accountId: string; payDate: string; symbol: string; amount: number }) => [d.accountId, d.payDate, d.symbol, d.amount].join("|");
+  const newDivs = takeNew(
+    divRows,
+    divKey,
+    countOf(existingDivs.map((d) => divKey({ accountId: d.accountId, payDate: d.payDate.toISOString().slice(0, 10), symbol: d.symbol, amount: Number(d.amount) }))),
+  );
+  const cashKey = (c: { accountId: string; date: string; type: string; currency: string; amount: number }) => [c.accountId, c.date, c.type, c.currency, c.amount].join("|");
+  const cashRows = parsedCash.map((c) => ({ accountId: accountId.get(c.account)!, type: c.type, currency: c.currency, amount: c.amount, fxRate: c.fxRate, date: c.date, memo: c.memo || null }));
+  const newCash = takeNew(
+    cashRows,
+    cashKey,
+    countOf(existingCash.map((c) => cashKey({ accountId: c.accountId, date: c.date.toISOString().slice(0, 10), type: c.type, currency: c.currency, amount: Number(c.amount) }))),
+  );
+
+  const skipped = rows.length - candidates.length + (divRows.length - newDivs.length) + (cashRows.length - newCash.length);
+  if (candidates.length + newDivs.length + newCash.length === 0) return { ok: true, message: `새로 추가할 기록이 없어요 (중복 ${skipped}건 건너뜀)` };
 
   // 같은 날짜 안의 실제 거래 순서를 찾는다 (증권사 파일은 보통 최신순)
-  const ordered = orderImportRows(existing, candidates);
+  const ordered = candidates.length ? orderImportRows(existing, candidates) : { rows: [] as (typeof candidates[number] & { createdAt: string })[], oversell: null };
   if (!ordered.rows) {
     const all = [...existing, ...candidates.map((c, i) => ({ ...c, createdAt: new Date(i).toISOString() }))];
     const o = oversellAt(all.filter((t) => t.accountId === ordered.oversell.accountId && t.symbol === ordered.oversell.symbol));
@@ -439,8 +537,15 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
         createdAt: new Date(t.createdAt),
       })),
     });
+    await tx.dividend.createMany({
+      data: newDivs.map((d) => ({ ...d, accountId: realId.get(d.accountId) ?? d.accountId, payDate: new Date(`${d.payDate}T00:00:00Z`) })),
+    });
+    await tx.cashFlow.createMany({
+      data: newCash.map((c) => ({ ...c, accountId: realId.get(c.accountId) ?? c.accountId, date: new Date(`${c.date}T00:00:00Z`) })),
+    });
   });
-  const parts = [`${incoming.length}건 추가`];
+  const parts = [`${incoming.length + newDivs.length + newCash.length}건 추가`];
+  if (newDivs.length || newCash.length) parts[0] += ` (매매 ${incoming.length} · 배당 ${newDivs.length} · 현금 ${newCash.length})`;
   if (skipped) parts.push(`중복 ${skipped}건 건너뜀`);
   if (newAccounts.length) parts.push(`새 계좌 ${newAccounts.join(", ")}`);
   return { ok: true, message: parts.join(" · ") };
@@ -449,8 +554,11 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
 // ---------- 계정 설정 ----------
 
 /** 목록 정렬 등 화면 설정 저장 (설정 화면에서 바꿀 때마다 호출) */
-export async function savePrefs(next: Prefs): Promise<FormState> {
+export async function savePrefs(patch: Partial<Prefs>): Promise<FormState> {
   const userId = await requireUserId();
+  // 바꾼 항목만 받아 저장된 설정에 합친다 (설정 화면의 여러 칸이 서로 덮어쓰지 않도록)
+  const current = readPrefs((await prisma.user.findUnique({ where: { id: userId }, select: { prefs: true } }))?.prefs);
+  const next = { ...current, ...patch };
   await prisma.user.update({ where: { id: userId }, data: { prefs: JSON.parse(JSON.stringify(readPrefs(next))) } });
   return { ok: true };
 }

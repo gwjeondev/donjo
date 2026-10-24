@@ -14,19 +14,19 @@ export function Welcome({ accounts }: { accounts: { id: string; name: string }[]
     },
     {
       title: "첫 매매 기록 추가하기",
-      desc: "매매기록 화면의 '추가'로 보유 중인 종목의 매수 기록을 넣으면 평균단가·수익률·자산 추이가 자동으로 계산돼요. 매수한 날짜를 정확히 넣을수록 수익률이 정확해요.",
+      desc: "거래내역 화면의 '추가'로 보유 중인 종목의 매수 기록을 넣으면 평균단가·수익률·자산 추이가 자동으로 계산돼요. 매수한 날짜를 정확히 넣을수록 수익률이 정확해요.",
       action: (
         <Link href="/transactions" className="btn-primary">
-          매매기록으로
+          거래내역으로
         </Link>
       ),
     },
     {
       title: "또는 CSV로 한 번에 가져오기",
-      desc: "엑셀로 정리해 둔 기록이 있다면 CSV로 저장해 매매기록 화면의 '가져오기'로 한꺼번에 올릴 수 있어요.",
+      desc: "엑셀로 정리해 둔 기록이 있다면 CSV로 저장해 거래내역 화면의 '가져오기'로 한꺼번에 올릴 수 있어요.",
       action: (
         <Link href="/transactions" className="btn-ghost">
-          매매기록에서 가져오기
+          거래내역에서 가져오기
         </Link>
       ),
     },

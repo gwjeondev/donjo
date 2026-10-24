@@ -1,11 +1,12 @@
 // 페이지에서 쓰는 데이터 로딩 (DB 기록 + 시세 결합)
 import "server-only";
-import type { Dividend as DividendRow, Transaction } from "@prisma/client";
+import type { CashFlow as CashRow, Dividend as DividendRow, Transaction } from "@prisma/client";
+import { cashBalances, cashTimeline, totalCash, type CashFlow } from "./cash";
 import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
-import { addDays, benchmarkSeries, buildDailySeries, type DailyPoint } from "./performance";
+import { addDays, benchmarkSeries, buildDailySeries, FX_SYMBOL, type DailyPoint } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
 const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC", nasdaq100: "^NDX" } as const;
@@ -51,6 +52,29 @@ export function toDividend(d: DividendRow): Dividend {
   };
 }
 
+export function toCashFlow(c: CashRow): CashFlow {
+  return {
+    id: c.id,
+    accountId: c.accountId,
+    type: c.type,
+    currency: c.currency,
+    amount: Number(c.amount),
+    fxRate: Number(c.fxRate),
+    date: c.date.toISOString().slice(0, 10),
+    createdAt: c.createdAt.toISOString(),
+    memo: c.memo,
+  };
+}
+
+/** 현금 입출금·환전 기록 (최근이 위) */
+export async function loadCashFlows(userId: string, accountId?: string) {
+  const rows = await prisma.cashFlow.findMany({
+    where: { account: { userId }, ...(accountId ? { accountId } : {}) },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+  });
+  return rows.map(toCashFlow);
+}
+
 /** 배당금 기록 (최근 지급일이 위) */
 export async function loadDividends(userId: string, accountId?: string) {
   const rows = await prisma.dividend.findMany({
@@ -58,6 +82,16 @@ export async function loadDividends(userId: string, accountId?: string) {
     orderBy: [{ payDate: "desc" }, { createdAt: "desc" }],
   });
   return rows.map(toDividend);
+}
+
+/** 배당 입력용 종목 목록: 계좌별로 거래한 적 있는 종목 (기록이 최신순이라 처음 만나는 이름이 현재 이름) */
+export function dividendStocks(trades: Trade[]) {
+  const m = new Map<string, { accountId: string; symbol: string; name: string; market: Trade["market"] }>();
+  for (const t of trades) {
+    const k = `${t.accountId}|${t.symbol}`;
+    if (!m.has(k)) m.set(k, { accountId: t.accountId, symbol: t.symbol, name: t.name, market: t.market });
+  }
+  return [...m.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
 /** 날짜별 세후 배당금(원화) 합계 — 수익률 계산용 */
@@ -76,10 +110,12 @@ export async function loadTrades(userId: string, accountId?: string) {
 }
 
 export async function loadPortfolio(userId: string, accountId?: string) {
-  const [accounts, trades, dividends] = await Promise.all([
+  const [accounts, trades, dividends, flows, prefs] = await Promise.all([
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
     loadTrades(userId, accountId),
     loadDividends(userId, accountId),
+    loadCashFlows(userId, accountId),
+    loadPrefs(userId),
   ]);
   const positions = computePositions(trades);
   const held = positions.filter((p) => p.quantity > 0);
@@ -90,7 +126,10 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   const quotedAt = times.length ? new Date(Math.min(...times)).toISOString() : null;
   /** 받은 배당금 합계 (세후, 원화) */
   const dividendKrw = dividends.reduce((s, d) => s + dividendNetKrw(d), 0);
-  return { accounts, trades, positions: valued, summary: summarize(valued), dividendKrw, fx, quotedAt };
+  /** 계좌별 현금 잔고와 합계 (원화·달러) */
+  const cashByAccount = cashBalances(flows, trades, dividends, prefs.cash);
+  const cash = totalCash(cashByAccount);
+  return { accounts, trades, positions: valued, summary: summarize(valued), dividendKrw, cash, cashByAccount, fx, quotedAt };
 }
 
 /** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */
@@ -113,6 +152,8 @@ const EMPTY_PERFORMANCE = {
   benchmarkMissing: [] as string[],
   /** 첫 거래일 (직접입력 날짜 범위용) */
   firstTrade: undefined as string | undefined,
+  /** 날짜별 현금(원화 환산) — 자산 추이에 더한다 */
+  cashDaily: {} as Record<string, number>,
 };
 
 async function computePerformance(userId: string, accountId?: string, rangeFrom?: string, market?: "kr" | "us") {
@@ -150,5 +191,24 @@ async function computePerformance(userId: string, accountId?: string, rangeFrom?
   const benchmarkMissing = Object.entries(BENCHMARKS)
     .filter(([, sym]) => !(prices.get(sym)?.size))
     .map(([k]) => k);
-  return { daily, benchmark, benchmarkMissing, firstTrade };
+  // 자산 추이용: 날짜별 현금 잔고(원화 환산). 국내/해외만 볼 때는 현금을 넣지 않는다
+  const cashDaily: Record<string, number> = {};
+  if (!market) {
+    const [flows, prefs] = await Promise.all([loadCashFlows(userId, accountId), loadPrefs(userId)]);
+    const timeline = cashTimeline(flows, allTrades, allDividends, prefs.cash);
+    if (timeline.length) {
+      const fx = prices.get(FX_SYMBOL);
+      const fxDates = fx ? [...fx.keys()].sort() : [];
+      let ti = -1;
+      let fi = -1;
+      for (const p of daily) {
+        while (ti + 1 < timeline.length && timeline[ti + 1].date <= p.date) ti++;
+        while (fi + 1 < fxDates.length && fxDates[fi + 1] <= p.date) fi++;
+        if (ti < 0) continue;
+        const rate = fi >= 0 ? fx!.get(fxDates[fi])! : 0;
+        cashDaily[p.date] = timeline[ti].krw + timeline[ti].usd * rate;
+      }
+    }
+  }
+  return { daily, benchmark, benchmarkMissing, firstTrade, cashDaily };
 }

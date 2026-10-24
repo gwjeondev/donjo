@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRightIcon } from "./icons";
 
 /** [이름표, 값, 값 색(선택)] */
 export type DetailRow = [label: string, value: React.ReactNode, className?: string];
@@ -26,7 +27,7 @@ export function DetailCard({
   /** 이름 앞의 작은 표시 (매수/매도 등) */
   badge?: React.ReactNode;
   sub?: React.ReactNode;
-  /** 제목을 누르면 갈 곳 (종목 화면 등) */
+  /** 누르면 갈 곳 (종목 화면 등). 수정·삭제 버튼이 없으면 카드 전체가 눌리고, 있으면 이름만 눌린다 */
   href?: string;
   value: React.ReactNode;
   valueClass?: string;
@@ -36,6 +37,9 @@ export function DetailCard({
   /** 카드 전체를 누르면 갈 곳 (href 대신) */
   to?: string;
 }) {
+  // 버튼이 없는 카드는 카드 전체를 링크로 (오른쪽 › 표시)
+  const whole = to ?? (actions ? undefined : href);
+  const titleHref = whole ? undefined : href;
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -43,8 +47,8 @@ export function DetailCard({
         <div className="min-w-0 flex-1" data-slot="left">
           <div className="flex min-w-0 items-center gap-1.5">
             {badge}
-            {href ? (
-              <Link href={href} title={title} className="min-w-0 truncate text-sm font-medium hover:text-brand hover:underline">
+            {titleHref ? (
+              <Link href={titleHref} title={title} className="min-w-0 truncate text-sm font-medium hover:text-brand hover:underline">
                 {title}
               </Link>
             ) : (
@@ -55,10 +59,12 @@ export function DetailCard({
           </div>
           {sub && <div className="mt-0.5 truncate text-xs text-muted" title={typeof sub === "string" ? sub : undefined}>{sub}</div>}
         </div>
-        <span className={`shrink-0 whitespace-nowrap text-base font-semibold ${valueClass}`} data-slot="right">
+        <span className={`flex shrink-0 items-center gap-0.5 whitespace-nowrap text-base font-semibold ${valueClass}`} data-slot="right">
           {value}
+          {whole && <ChevronRightIcon className="-mr-1 size-4 text-muted" />}
         </span>
       </div>
+      {rows.length > 0 && (
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         {rows.map(([label, v, cls = ""]) => (
           <div key={label} className="contents">
@@ -69,16 +75,27 @@ export function DetailCard({
           </div>
         ))}
       </dl>
+      )}
       {actions && <div className="-mb-1 -mr-1.5 mt-1 flex justify-end">{actions}</div>}
     </>
   );
-  return to ? (
+  return whole ? (
     <li>
-      <Link href={to} className="block px-4 py-3 active:bg-surface-2">
+      <Link href={whole} className="block px-4 py-3 hover:bg-surface-2/60 active:bg-surface-2">
         {body}
       </Link>
     </li>
   ) : (
     <li className="px-4 py-3">{body}</li>
+  );
+}
+
+/** 표 안에서 다른 화면으로 가는 이름: 이름 뒤에 › 를 붙여 눌러서 이동할 수 있다는 걸 보여 준다 */
+export function NameLink({ href, children, title, className = "" }: { href: string; children: React.ReactNode; title?: string; className?: string }) {
+  return (
+    <Link href={href} title={title} className={`group flex min-w-0 items-center gap-0.5 font-medium hover:text-brand ${className}`}>
+      <span className="min-w-0 truncate group-hover:underline">{children}</span>
+      <ChevronRightIcon className="size-3.5 shrink-0 text-muted group-hover:text-brand" />
+    </Link>
   );
 }

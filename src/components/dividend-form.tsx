@@ -30,7 +30,7 @@ const today = () => {
 const stockValue = (s: { symbol: string; market: Market; name: string }) => `${s.symbol}|${s.market}|${s.name}`;
 const toNum = (v: string) => Number(v.replaceAll(",", "")) || 0;
 
-function DividendForm({
+export function DividendForm({
   accounts,
   stocks,
   defaultAccountId,

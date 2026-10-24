@@ -35,6 +35,8 @@ export interface Prefs {
   holdings: Sort<HoldingSortKey>;
   /** 매매기록: 최신순(new) / 오래된순(old) */
   trades: "new" | "old";
+  /** 현금: 입출금만(manual) / 매매·배당도 반영(linked) */
+  cash: "manual" | "linked";
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -42,6 +44,7 @@ export const DEFAULT_PREFS: Prefs = {
   accounts: { key: "created", dir: "asc" },
   holdings: { key: "value", dir: "desc" },
   trades: "new",
+  cash: "manual",
 };
 
 const isDir = (v: unknown): v is SortDir => v === "asc" || v === "desc";
@@ -61,6 +64,7 @@ export function readPrefs(raw: unknown): Prefs {
     accounts: readSort(o.accounts, ACCOUNT_SORTS, DEFAULT_PREFS.accounts),
     holdings: readSort(o.holdings, HOLDING_SORTS, DEFAULT_PREFS.holdings),
     trades: o.trades === "old" ? "old" : "new",
+    cash: o.cash === "linked" ? "linked" : "manual",
   };
 }
 

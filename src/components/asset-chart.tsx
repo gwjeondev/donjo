@@ -14,7 +14,10 @@ interface Point {
 
 const RANGES = ["1M", "3M", "YTD", "1Y", "전체"] as const satisfies readonly RangeId[];
 
-export function AssetChart({ points, failed = false }: { points: Point[]; failed?: boolean }) {
+/**
+ * 자산 추이: 금액은 입출금까지 반영한 총자산(주식 + 현금), 기간 수익률은 입출금을 뺀 투자 성과.
+ */
+export function AssetChart({ points, failed = false, withCash = false }: { points: Point[]; failed?: boolean; withCash?: boolean }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("3M");
   const { data, base } = useMemo(() => {
     if (!points.length) return { data: points, base: undefined };
@@ -31,7 +34,9 @@ export function AssetChart({ points, failed = false }: { points: Point[]; failed
     <div className="card flex h-full flex-col p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold">자산 추이</h2>
+          <h2 className="font-semibold">
+            자산 추이{withCash && <span className="ml-1.5 text-xs font-normal text-muted">주식 + 현금</span>}
+          </h2>
           {last && (
             <p className="mt-0.5 text-xs text-ink-2">
               기간 수익률 <span className={`font-semibold ${tone(periodReturn)}`}>{fmtPct(periodReturn)}</span>
@@ -90,7 +95,10 @@ export function AssetChart({ points, failed = false }: { points: Point[]; failed
                   return (
                     <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-sm">
                       <div className="text-muted">{p.date}</div>
-                      <div className="mt-0.5 font-semibold text-ink">{fmtKrw(p.value)}</div>
+                      <div className="mt-0.5 font-semibold text-ink">
+                        {withCash ? "총자산 " : "평가금액 "}
+                        {fmtKrw(p.value)}
+                      </div>
                       <div className={tone(p.cum)}>누적 {fmtPct(p.cum)}</div>
                     </div>
                   );

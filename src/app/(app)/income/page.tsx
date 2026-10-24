@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AddDividendButton, type DividendStock } from "@/components/dividend-form";
 import { DividendList, RealizedList, TaxSaleList } from "@/components/income-lists";
 import { FilterRow, StatCard } from "@/components/filter-row";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
@@ -49,13 +48,6 @@ export default async function IncomePage({
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const today = todayStr();
 
-  // 배당 입력용 종목 목록: 계좌별로 거래한 적 있는 종목 (가장 최근 이름)
-  const stockMap = new Map<string, DividendStock>();
-  for (const t of account ? await loadTrades(userId) : trades) {
-    const k = `${t.accountId}|${t.symbol}`;
-    if (!stockMap.has(k)) stockMap.set(k, { accountId: t.accountId, symbol: t.symbol, name: t.name, market: t.market });
-  }
-  const stocks = [...stockMap.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const tabs = (
     <QueryTabs
@@ -71,9 +63,7 @@ export default async function IncomePage({
 
   return (
     <>
-      <PageHeader title="손익" sub="매도로 확정된 손익, 받은 배당금, 해외주식 양도세 예상액이에요">
-        <AddDividendButton accounts={accounts} stocks={stocks} defaultAccountId={account} />
-      </PageHeader>
+      <PageHeader title="손익" sub="매도로 확정된 손익, 받은 배당금, 해외주식 양도세 예상액이에요. 배당 등록은 거래내역에서 해요" />
       <div className="space-y-5">
         {tabs}
         {tab === "tax" ? (
@@ -88,7 +78,6 @@ export default async function IncomePage({
             trades={trades}
             allDividends={allDividends}
             accountName={accountName}
-            stocks={stocks}
             today={today}
           />
         )}
@@ -107,7 +96,6 @@ function IncomeView({
   trades,
   allDividends,
   accountName,
-  stocks,
   today,
 }: {
   tab: "realized" | "dividend";
@@ -118,7 +106,6 @@ function IncomeView({
   trades: Awaited<ReturnType<typeof loadTrades>>;
   allDividends: Awaited<ReturnType<typeof loadDividends>>;
   accountName: Map<string, string>;
-  stocks: DividendStock[];
   today: string;
 }) {
   // 실현손익은 계좌의 모든 매매로 평균단가를 따라가며 계산한 뒤 기간·시장으로 거른다
@@ -207,7 +194,7 @@ function IncomeView({
         ) : dividends.length === 0 ? (
           <p className="card p-8 text-center text-sm text-muted">이 기간에 받은 배당금이 없어요. 오른쪽 위 ‘배당’으로 추가해 보세요.</p>
         ) : (
-          <DividendList dividends={dividends} accountName={accountName} showAccount={!account} accounts={accounts} stocks={stocks} />
+          <DividendList dividends={dividends} accountName={accountName} showAccount={!account} />
         )}
         <p className="text-xs leading-relaxed text-muted">
           실현손익 = 매도 대금(수수료·세금 뺀 금액) − 판 수량의 평균 매입금액. 해외 주식은 매도일 환율과 매수일 환율로 원화 환산해요. 배당금은 세후

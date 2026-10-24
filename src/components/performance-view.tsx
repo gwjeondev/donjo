@@ -3,9 +3,8 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
-import Link from "next/link";
 import { periodBounds } from "@/lib/range";
-import { DetailCard } from "./detail-card";
+import { DetailCard, NameLink } from "./detail-card";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
@@ -125,9 +124,9 @@ export function PerformanceView({
                 {[...data].reverse().map((r) => (
                   <tr key={r.period}>
                     <td className="px-4 py-2.5">
-                      <Link href={tradesHref(r.period)} className="text-brand hover:underline" title="이 기간의 매매 기록 보기">
+                      <NameLink href={tradesHref(r.period)} title="이 기간의 거래내역 보기" className="text-brand">
                         {r.period}
-                      </Link>
+                      </NameLink>
                     </td>
                     <td className="px-4 py-2.5 text-right">{fmtKrw(r.startValue)}</td>
                     <td className="px-4 py-2.5 text-right font-medium">{fmtKrw(r.endValue)}</td>
@@ -162,7 +161,7 @@ export function PerformanceView({
             </ul>
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            기간을 누르면 그 기간의 매매 기록을 보여 줘요. <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
+            기간을 누르면 그 기간의 거래내역을 보여 줘요. <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
             <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 투자 손익 = 기말 − 기초 − 순투입으로, 아직 팔지 않은 종목의 평가 변화까지 들어가요. 매도로 확정된 손익은 손익 화면에서 볼 수 있어요.
           </p>
         </>

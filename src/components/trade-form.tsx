@@ -23,7 +23,7 @@ const today = () => {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
-function TradeForm({
+export function TradeForm({
   accounts,
   defaultAccountId,
   initial,

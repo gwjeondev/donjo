@@ -15,7 +15,8 @@ describe("csv", () => {
     // 국내 종목은 "국내"로 나가고, 거래소는 가져올 때 다시 찾는다
     expect(csv).toContain(",해외,SNDK,");
     expect(csv).toContain(",국내,005930,");
-    expect(rows).toEqual([sample[0], { ...sample[1], market: "KR", symbol: "005930" }]);
+    // 날짜순으로 내보낸다
+    expect(rows).toEqual([{ ...sample[1], market: "KR", symbol: "005930" }, sample[0]]);
   });
 
   it("시장 칸은 국내/해외·코스피/코스닥/미국을 받고, 비우면 종목코드로 판단한다", () => {
@@ -40,10 +41,29 @@ describe("csv", () => {
     const { rows, errors } = fromCsv(csv);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ tradeDate: "2026-10-01", quantity: 1000, fxRate: 1 });
-    expect(errors).toEqual(["3번째 줄: 거래일 형식이 올바르지 않아요 (YYYY-MM-DD)", "4번째 줄: 구분은 매수/매도여야 해요"]);
+    expect(errors).toEqual(["3번째 줄: 거래일 형식이 올바르지 않아요 (YYYY-MM-DD)", "4번째 줄: 구분은 매수/매도/배당/입금/출금/환전 중 하나여야 해요"]);
   });
 
   it("필수 열이 없으면 거부한다", () => {
     expect(fromCsv("계좌,거래일\n일반,2026-01-01").errors[0]).toContain("필수 열이 없어요");
+  });
+
+  it("배당·입출금·환전도 같은 파일로 내보내고 다시 읽는다", () => {
+    const csv = toCsv(
+      [sample[1]],
+      [{ account: "일반", payDate: "2026-04-18", market: "KOSPI", symbol: "005930.KS", name: "삼성전자", amount: 3610, tax: 550, fxRate: 1, memo: "" }],
+      [
+        { account: "일반", date: "2026-01-02", type: "DEPOSIT", currency: "KRW", amount: 1_000_000, fxRate: 1, memo: "월급" },
+        { account: "토스", date: "2026-01-03", type: "EXCHANGE", currency: "KRW", amount: 140_000, fxRate: 1400, memo: "" },
+      ],
+    );
+    const { rows, dividends, cash, errors } = fromCsv(csv);
+    expect(errors).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(dividends).toEqual([{ account: "일반", payDate: "2026-04-18", market: "KR", symbol: "005930", name: "삼성전자", amount: 3610, tax: 550, fxRate: 1, memo: "" }]);
+    expect(cash).toEqual([
+      { account: "일반", date: "2026-01-02", type: "DEPOSIT", currency: "KRW", amount: 1_000_000, fxRate: 1, memo: "월급" },
+      { account: "토스", date: "2026-01-03", type: "EXCHANGE", currency: "KRW", amount: 140_000, fxRate: 1400, memo: "" },
+    ]);
   });
 });

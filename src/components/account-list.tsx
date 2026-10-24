@@ -5,6 +5,7 @@ import { useState } from "react";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
 import type { Summary } from "@/lib/portfolio";
 import { ACCOUNT_SORTS, sortBy, type AccountSortKey, type Sort } from "@/lib/prefs";
+import { ChevronRightIcon } from "./icons";
 import { SortControl } from "./sort-control";
 
 export interface AccountCard {
@@ -15,11 +16,13 @@ export interface AccountCard {
   order: number;
   count: number;
   summary: Summary;
+  /** 현금 (원화 환산). 기록이 없으면 null */
+  cashKrw: number | null;
 }
 
 const ACCOUNT_VALUE: Record<AccountSortKey, (a: AccountCard) => number | string> = {
   created: (a) => a.order,
-  value: (a) => a.summary.valueKrw,
+  value: (a) => a.summary.valueKrw + (a.cashKrw ?? 0),
   returnRate: (a) => a.summary.returnRate,
   pnl: (a) => a.summary.unrealizedPnlKrw,
   realized: (a) => a.summary.realizedPnlKrw,
@@ -42,14 +45,17 @@ export function AccountList({ accounts, sort: initialSort }: { accounts: Account
           <Link key={a.id} href={`/accounts/${a.id}`} className="card block p-5 transition hover:border-brand/50">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="truncate font-semibold">{a.name}</h2>
-              <span className="shrink-0 text-xs text-muted">{a.broker ?? ""}</span>
+              <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted">
+                {a.broker ?? ""}
+                <ChevronRightIcon className="size-4" />
+              </span>
             </div>
-            <p className="mt-3 text-2xl font-bold">{fmtKrw(a.summary.valueKrw)}</p>
+            <p className="mt-3 text-2xl font-bold">{fmtKrw(a.summary.valueKrw + (a.cashKrw ?? 0))}</p>
             <p className={`mt-1 text-sm ${tone(a.summary.unrealizedPnlKrw)}`}>
               {fmtSigned(a.summary.unrealizedPnlKrw)} ({fmtPct(a.summary.returnRate)})
             </p>
             <p className="mt-3 text-xs text-muted">
-              보유 {a.count}종목 · 실현손익{" "}
+              보유 {a.count}종목{a.cashKrw != null && <> · 현금 {fmtKrw(a.cashKrw)}</>} · 실현손익{" "}
               <span className={tone(a.summary.realizedPnlKrw)}>{fmtSigned(a.summary.realizedPnlKrw)}</span>
             </p>
           </Link>

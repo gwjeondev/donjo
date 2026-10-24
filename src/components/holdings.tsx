@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
 import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { DEFAULT_PREFS, HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
-import { DetailCard } from "./detail-card";
+import { DetailCard, NameLink } from "./detail-card";
 import { SortControl } from "./sort-control";
 
 /** 오늘 등락률 (전일 종가 대비) */
@@ -89,12 +88,7 @@ export function Holdings({
               {rows.map(({ p, d }) => (
                 <tr key={`${p.accountId}-${p.symbol}`} className="hover:bg-surface-2/60">
                   <td className="px-4 py-3" title={p.name}>
-                    <Link
-                      href={stockHref(p.symbol)}
-                      className="block truncate font-medium hover:text-brand hover:underline"
-                    >
-                      {p.name}
-                    </Link>
+                    <NameLink href={stockHref(p.symbol)}>{p.name}</NameLink>
                     <div className="truncate text-xs text-muted">
                       {MARKET_LABEL[p.market]} · {p.symbol.replace(/\.(KS|KQ)$/, "")}
                       <span className="xl:hidden"> · {fmtQty(p.quantity)}주</span>

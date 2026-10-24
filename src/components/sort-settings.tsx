@@ -15,7 +15,7 @@ export function SortSettings({ initial }: { initial: Prefs }) {
     setPrefs(next);
     setStatus("saving");
     startTransition(async () => {
-      const r = await savePrefs(next).catch(() => ({ error: "x" }));
+      const r = await savePrefs({ accounts: next.accounts, holdings: next.holdings, trades: next.trades }).catch(() => ({ error: "x" }));
       setStatus("error" in r && r.error ? "error" : "saved");
     });
   };
@@ -35,8 +35,8 @@ export function SortSettings({ initial }: { initial: Prefs }) {
         <SortControl label="보유 종목 정렬" options={HOLDING_SORTS} value={prefs.holdings} onChange={(holdings) => update({ ...prefs, holdings })} />,
       )}
       {row(
-        "매매 기록",
-        <div role="radiogroup" aria-label="매매 기록 정렬" className="flex rounded-lg bg-surface-2 p-0.5 text-sm">
+        "거래 내역",
+        <div role="radiogroup" aria-label="거래 내역 정렬" className="flex rounded-lg bg-surface-2 p-0.5 text-sm">
           {(["new", "old"] as const).map((o) => (
             <button
               key={o}

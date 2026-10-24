@@ -3,6 +3,7 @@ import { LocalizeNamesButton } from "@/components/localize-names";
 import { PageHeader } from "@/components/page-header";
 import { PasswordForm, ProfileForm } from "@/components/settings-forms";
 import { SortSettings } from "@/components/sort-settings";
+import { CashModeSetting } from "@/components/cash-mode-setting";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { prisma } from "@/lib/db";
 import { readPrefs } from "@/lib/prefs";
@@ -41,6 +42,9 @@ export default async function SettingsPage() {
             <ThemeToggle full />
           </div>
         </Section>
+        <Section title="현금 관리" desc="계좌의 원화·달러 현금은 거래내역의 '추가 → 입출금·환전'으로 넣어요.">
+          <CashModeSetting initial={readPrefs(user.prefs)} />
+        </Section>
         <Section
           title="목록 정렬"
           desc="각 목록의 기본 정렬 순서예요. 목록 위의 정렬 버튼으로 잠깐 바꿔 볼 수도 있어요(그 화면에서만 적용)."
@@ -55,7 +59,7 @@ export default async function SettingsPage() {
         </Section>
         <Section
           title="데이터 백업"
-          desc="모든 매매 기록을 CSV 파일로 받아요. 매매기록 화면의 '가져오기'로 다시 불러올 수 있어요."
+          desc="모든 매매 기록을 CSV 파일로 받아요. 거래내역 화면의 '가져오기'로 다시 불러올 수 있어요."
         >
           <ExportButton compact={false} />
         </Section>

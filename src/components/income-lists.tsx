@@ -1,10 +1,8 @@
 // 손익 화면의 목록들. 다른 목록과 같은 모양: 넓은 화면은 표, 좁은 화면은 DetailCard
-import Link from "next/link";
 import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
 import { dividendNetKrw, type Dividend, type RealizedEvent } from "@/lib/income";
 import type { TaxableSale } from "@/lib/tax";
-import { DeleteDividendButton, EditDividendButton, type DividendStock } from "./dividend-form";
-import { DetailCard, type DetailRow } from "./detail-card";
+import { DetailCard, NameLink, type DetailRow } from "./detail-card";
 
 const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
 const TABLE = "hidden w-full table-fixed whitespace-nowrap text-sm xl:table [&_td]:overflow-hidden [&_td]:text-ellipsis";
@@ -14,9 +12,7 @@ const th = (w: string, align: "left" | "right" | "center" = "right") => `${w} px
 function StockCell({ name, symbol }: { name: string; symbol: string }) {
   return (
     <td className="px-3 py-3" title={name}>
-      <Link href={stockHref(symbol)} className="block truncate font-medium hover:text-brand hover:underline">
-        {name}
-      </Link>
+      <NameLink href={stockHref(symbol)}>{name}</NameLink>
     </td>
   );
 }
@@ -126,19 +122,15 @@ export function TaxSaleList({ sales, accountName, showAccount }: { sales: Taxabl
   );
 }
 
-/** 배당금: 지급 한 건마다, 수정·삭제 버튼 포함 (매매기록과 같은 자리) */
+/** 배당금: 지급 한 건마다 (조회 전용 — 수정·삭제는 거래내역에서) */
 export function DividendList({
   dividends,
   accountName,
   showAccount,
-  accounts,
-  stocks,
 }: {
   dividends: Dividend[];
   accountName: Map<string, string>;
   showAccount: boolean;
-  accounts: { id: string; name: string }[];
-  stocks: DividendStock[];
 }) {
   const cur = (d: Dividend) => (d.market === "US" ? "USD" : "KRW");
   return (
@@ -152,7 +144,6 @@ export function DividendList({
             <th className={th("w-32")}>세전</th>
             <th className={th("w-28")}>세금</th>
             <th className={th("w-36")}>받은 금액</th>
-            <th className="w-20 px-2 py-2.5" />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -161,20 +152,12 @@ export function DividendList({
               <td className="py-3 pl-4 pr-3 text-ink-2">{d.payDate}</td>
               {showAccount && <td className="truncate px-3 py-3 text-ink-2">{accountName.get(d.accountId)}</td>}
               <td className="px-3 py-3" title={d.name}>
-                <Link href={stockHref(d.symbol)} className="block truncate font-medium hover:text-brand hover:underline">
-                  {d.name}
-                </Link>
+                <NameLink href={stockHref(d.symbol)}>{d.name}</NameLink>
                 {d.memo && <div className="truncate text-xs text-muted">{d.memo}</div>}
               </td>
               <td className="px-3 py-3 text-right">{fmtPrice(d.amount, cur(d))}</td>
               <td className="px-3 py-3 text-right text-ink-2">{d.tax ? fmtPrice(d.tax, cur(d)) : "-"}</td>
               <td className="px-3 py-3 text-right font-medium text-up">+{fmtKrw(dividendNetKrw(d))}</td>
-              <td className="px-2 py-2">
-                <div className="flex justify-end">
-                  <EditDividendButton accounts={accounts} stocks={stocks} dividend={d} />
-                  <DeleteDividendButton id={d.id} />
-                </div>
-              </td>
             </tr>
           ))}
         </tbody>
@@ -196,12 +179,6 @@ export function DividendList({
               value={`+${fmtKrw(dividendNetKrw(d))}`}
               valueClass="text-up"
               rows={rows}
-              actions={
-                <>
-                  <EditDividendButton accounts={accounts} stocks={stocks} dividend={d} />
-                  <DeleteDividendButton id={d.id} />
-                </>
-              }
             />
           );
         })}
