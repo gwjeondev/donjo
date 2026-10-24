@@ -1,6 +1,6 @@
 // 화면 이동 중 DB를 읽는 동안 보여 주는 뼈대 화면
 function Block({ className = "" }: { className?: string }) {
-  return <div className={`skeleton-bar rounded-lg ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-surface-2 ${className}`} />;
 }
 
 export default function Loading() {

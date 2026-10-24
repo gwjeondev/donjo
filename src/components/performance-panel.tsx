@@ -86,7 +86,7 @@ export function PerformancePanel({
           선택한 기간에는 기록이 없어요. {first && last && `${dot(first)} ~ ${dot(last)} 사이로 골라 주세요.`}
         </p>
       ) : (
-        <div className={`space-y-4 ${pending ? "loading-shimmer" : ""}`}>
+        <div className={`space-y-4 transition-opacity ${pending ? "opacity-50" : ""}`}>
           <BenchmarkChart
             points={daily.length >= 2 ? view.benchmark : benchmark}
             base={view.base}
