@@ -1,5 +1,5 @@
 // 계좌 현금(원화·달러) 잔고. 입금·출금·환전 기록으로 계산하고,
-// '자동 반영'(linked)이면 매수·매도·배당도 현금에 반영한다.
+// '매매와 연동'(linked)이면 연동을 켠 뒤에 기록한 매수·매도·배당도 현금에 반영한다.
 //  - 국내 주식: 원화에서 사고 원화로 받는다
 //  - 미국 주식: 달러로만 사고 달러로 받는다 (달러는 입금·환전으로 직접 넣는다. 모자라면 달러가 마이너스)
 import { currencyOf, sortTrades, type Trade } from "./portfolio";
@@ -57,9 +57,13 @@ function applyTrade(b: CashBalance, t: Trade) {
 
 type Event = { date: string; order: number; created: string; run: (b: CashBalance) => void; accountId: string };
 
-function events(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode: CashMode): Event[] {
+function events(flows: CashFlow[], allTrades: Trade[], allDividends: Dividend[], mode: CashMode, since?: string): Event[] {
   const ev: Event[] = flows.map((f) => ({ date: f.date, order: 0, created: f.createdAt ?? "", accountId: f.accountId, run: (b) => applyCash(b, f) }));
   if (mode === "linked") {
+    // 연동을 켠 뒤에 기록한 것만 (이미 있던 기록은 현금을 바꾸지 않는다)
+    const after = (created?: string) => !since || (created ?? "") >= since;
+    const trades = allTrades.filter((t) => after(t.createdAt));
+    const dividends = allDividends.filter((d) => after(d.createdAt));
     // 같은 날에는 입출금 → 매매 → 배당 순서
     sortTrades(trades).forEach((t, i) =>
       ev.push({ date: t.tradeDate, order: 1, created: String(i).padStart(8, "0"), accountId: t.accountId, run: (b) => applyTrade(b, t) }),
@@ -79,9 +83,9 @@ function events(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode:
 }
 
 /** 계좌별 현재 현금 잔고 */
-export function cashBalances(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode: CashMode): Map<string, CashBalance> {
+export function cashBalances(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode: CashMode, since?: string): Map<string, CashBalance> {
   const out = new Map<string, CashBalance>();
-  for (const e of events(flows, trades, dividends, mode)) {
+  for (const e of events(flows, trades, dividends, mode, since)) {
     if (!out.has(e.accountId)) out.set(e.accountId, { krw: 0, usd: 0 });
     e.run(out.get(e.accountId)!);
   }
@@ -99,10 +103,10 @@ export function totalCash(balances: Map<string, CashBalance>): CashBalance {
 }
 
 /** 날짜별 현금 잔고(모든 계좌 합) — 그 날짜가 끝난 뒤의 잔고. 자산 추이용 */
-export function cashTimeline(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode: CashMode) {
+export function cashTimeline(flows: CashFlow[], trades: Trade[], dividends: Dividend[], mode: CashMode, since?: string) {
   const b = { krw: 0, usd: 0 };
   const out: { date: string; krw: number; usd: number }[] = [];
-  for (const e of events(flows, trades, dividends, mode)) {
+  for (const e of events(flows, trades, dividends, mode, since)) {
     e.run(b);
     if (out.at(-1)?.date === e.date) Object.assign(out.at(-1)!, b);
     else out.push({ date: e.date, ...b });

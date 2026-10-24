@@ -558,7 +558,12 @@ export async function savePrefs(patch: Partial<Prefs>): Promise<FormState> {
   const userId = await requireUserId();
   // 바꾼 항목만 받아 저장된 설정에 합친다 (설정 화면의 여러 칸이 서로 덮어쓰지 않도록)
   const current = readPrefs((await prisma.user.findUnique({ where: { id: userId }, select: { prefs: true } }))?.prefs);
-  const next = { ...current, ...patch };
+  const { cashSince: _ignored, ...rest } = patch;
+  void _ignored;
+  const next: Prefs = { ...current, ...rest };
+  // 매매와 연동은 켠 순간부터: 그 뒤에 기록한 매수·매도·배당만 현금에 반영한다 (끄면 시작 시각도 지운다)
+  if (rest.cash === "linked" && current.cash !== "linked") next.cashSince = new Date().toISOString();
+  if (next.cash !== "linked") delete next.cashSince;
   await prisma.user.update({ where: { id: userId }, data: { prefs: JSON.parse(JSON.stringify(readPrefs(next))) } });
   return { ok: true };
 }

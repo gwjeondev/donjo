@@ -10,9 +10,15 @@ const OPTIONS = [
   {
     value: "linked",
     label: "매매와 연동",
-    desc: "매수하면 현금이 줄고, 매도·배당이 들어오면 늘어요. 국내 주식은 원화, 미국 주식은 달러로만 사고팔아요. 달러는 입금이나 환전으로 직접 넣어 주세요.",
+    desc: "켠 뒤에 새로 기록한 매수·매도·배당부터 현금에 반영해요. 이미 있는 기록은 현금을 바꾸지 않아요. 국내 주식은 원화, 미국 주식은 달러로만 사고팔아요. 달러는 입금이나 환전으로 직접 넣어 주세요.",
   },
 ] as const;
+
+const fmtSince = (iso: string) => {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 /** 설정: 현금 잔고를 매매와 연동할지 */
 export function CashModeSetting({ initial }: { initial: Prefs }) {
@@ -44,6 +50,11 @@ export function CashModeSetting({ initial }: { initial: Prefs }) {
             <span className="mt-0.5 block text-xs leading-relaxed text-ink-2" data-wrap="ok">
               {o.desc}
             </span>
+            {o.value === "linked" && mode === "linked" && initial.cash === "linked" && initial.cashSince && (
+              <span className="mt-1 block text-xs text-muted" suppressHydrationWarning /* 서버와 브라우저의 시간대가 달라도 브라우저 시각으로 */>
+                {fmtSince(initial.cashSince)}부터 연동 중
+              </span>
+            )}
           </span>
         </label>
       ))}

@@ -15,7 +15,13 @@ import { computePositions, summarize, valuePosition, type Trade } from "./portfo
 /** 사용자 화면 설정 (없거나 형식이 틀리면 기본값) */
 export async function loadPrefs(userId: string) {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { prefs: true } });
-  return readPrefs(u?.prefs);
+  const prefs = readPrefs(u?.prefs);
+  // 연동 시작 시각이 없던 때 켠 경우: 지금을 시작으로 정해 둔다 (이미 있는 기록은 현금에 반영하지 않는다)
+  if (prefs.cash === "linked" && !prefs.cashSince) {
+    prefs.cashSince = new Date().toISOString();
+    await prisma.user.update({ where: { id: userId }, data: { prefs: JSON.parse(JSON.stringify(prefs)) } });
+  }
+  return prefs;
 }
 
 export function toTrade(t: Transaction): Trade {
@@ -48,6 +54,7 @@ export function toDividend(d: DividendRow): Dividend {
     tax: Number(d.tax),
     fxRate: Number(d.fxRate),
     payDate: d.payDate.toISOString().slice(0, 10),
+    createdAt: d.createdAt.toISOString(),
     memo: d.memo,
   };
 }
@@ -127,7 +134,7 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   /** 받은 배당금 합계 (세후, 원화) */
   const dividendKrw = dividends.reduce((s, d) => s + dividendNetKrw(d), 0);
   /** 계좌별 현금 잔고와 합계 (원화·달러) */
-  const cashByAccount = cashBalances(flows, trades, dividends, prefs.cash);
+  const cashByAccount = cashBalances(flows, trades, dividends, prefs.cash, prefs.cashSince);
   const cash = totalCash(cashByAccount);
   return { accounts, trades, positions: valued, summary: summarize(valued), dividendKrw, cash, cashByAccount, fx, quotedAt };
 }
@@ -195,7 +202,7 @@ async function computePerformance(userId: string, accountId?: string, rangeFrom?
   const cashDaily: Record<string, number> = {};
   if (!market) {
     const [flows, prefs] = await Promise.all([loadCashFlows(userId, accountId), loadPrefs(userId)]);
-    const timeline = cashTimeline(flows, allTrades, allDividends, prefs.cash);
+    const timeline = cashTimeline(flows, allTrades, allDividends, prefs.cash, prefs.cashSince);
     if (timeline.length) {
       const fx = prices.get(FX_SYMBOL);
       const fxDates = fx ? [...fx.keys()].sort() : [];

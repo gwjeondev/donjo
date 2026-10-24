@@ -15,6 +15,7 @@ export interface Dividend {
   fxRate: number;
   /** YYYY-MM-DD */
   payDate: string;
+  createdAt?: string;
   memo?: string | null;
 }
 

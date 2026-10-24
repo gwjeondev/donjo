@@ -37,6 +37,8 @@ export interface Prefs {
   trades: "new" | "old";
   /** 현금: 입출금만(manual) / 매매·배당도 반영(linked) */
   cash: "manual" | "linked";
+  /** 매매와 연동을 켠 시각 (ISO). 이 뒤에 기록한 매수·매도·배당만 현금에 반영한다 */
+  cashSince?: string;
 }
 
 export const DEFAULT_PREFS: Prefs = {
@@ -65,6 +67,7 @@ export function readPrefs(raw: unknown): Prefs {
     holdings: readSort(o.holdings, HOLDING_SORTS, DEFAULT_PREFS.holdings),
     trades: o.trades === "old" ? "old" : "new",
     cash: o.cash === "linked" ? "linked" : "manual",
+    ...(o.cash === "linked" && typeof o.cashSince === "string" && !Number.isNaN(Date.parse(o.cashSince)) ? { cashSince: o.cashSince } : {}),
   };
 }
 

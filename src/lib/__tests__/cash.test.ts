@@ -37,6 +37,16 @@ describe("현금 잔고", () => {
     expect(b.krw).toBeCloseTo(720_000);
   });
 
+  it("연동은 켠 뒤에 기록한 매매·배당만 반영한다", () => {
+    const t = [
+      trade({ quantity: 10, price: 70_000, createdAt: "2026-03-01T00:00:00.000Z" }),
+      trade({ quantity: 1, price: 50_000, createdAt: "2026-03-10T00:00:00.000Z" }),
+    ];
+    const d: Dividend[] = [{ ...divs[0], market: "KOSPI", amount: 1000, tax: 0, createdAt: "2026-03-11T00:00:00.000Z" }];
+    const b = cashBalances(flows, t, d, "linked", "2026-03-05T00:00:00.000Z").get("a")!;
+    expect(b.krw).toBeCloseTo(2_900_000 - 50_000 + 1000);
+  });
+
   it("날짜별 잔고", () => {
     const tl = cashTimeline(flows, trades, divs, "manual");
     expect(tl).toEqual([{ date: "2026-01-02", krw: 3_000_000, usd: 0 }, { date: "2026-02-01", krw: 2_900_000, usd: 0 }]);
