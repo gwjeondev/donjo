@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { RenameStockButton } from "@/components/rename-stock";
 import { AccountBreakdown, StockPriceChart, StockSummary, type PricePoint } from "@/components/stock-detail";
 import { AddTradeButton } from "@/components/trade-form";
-import { TradeList } from "@/components/trade-list";
+import { LinkCards } from "@/components/link-cards";
 import { loadPortfolio } from "@/lib/data";
 import { fmtPct, fmtPrice, MARKET_LABEL, tone } from "@/lib/format";
 import { getPriceSeries, getQuotes } from "@/lib/market/service";
@@ -71,10 +71,14 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
         <StockSummary position={position} usdKrw={fx.rate} />
         <StockPriceChart points={points} avgCost={position.quantity > 0 ? position.avgCost : null} currency={currency} />
         <AccountBreakdown rows={positions.map((p) => ({ ...p, accountName: accountName.get(p.accountId) ?? "" }))} usdKrw={fx.rate} />
-        <section>
-          <h2 className="mb-2 font-semibold">매매 기록</h2>
-          <TradeList trades={trades} accounts={accounts} />
-        </section>
+        {/* 기록 목록은 거래내역 화면에서 (이 종목으로 걸러서 연다) */}
+        <LinkCards
+          label="이 종목 더 보기"
+          links={[
+            { href: `/transactions?symbol=${encodeURIComponent(symbol)}`, label: "거래내역", desc: "이 종목의 매매·배당 기록" },
+            { href: `/income?symbol=${encodeURIComponent(symbol)}`, label: "손익", desc: "이 종목의 실현손익·배당금" },
+          ]}
+        />
       </div>
     </>
   );

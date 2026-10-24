@@ -23,3 +23,12 @@ export const tone = (n: number) => (n > 0 ? "text-up" : n < 0 ? "text-down" : "t
 export const MARKET_LABEL = { KOSPI: "국내", KOSDAQ: "국내", US: "해외" } as const;
 /** 거래소까지 골라야 하는 드문 경우(직접 입력 시 자동 판별 실패)에만 쓴다 */
 export const EXCHANGE_LABEL = { KOSPI: "코스피", KOSDAQ: "코스닥", US: "미국" } as const;
+
+/** 종목코드로 기록에서 종목 이름 찾기 (없으면 코드) */
+export function symbolName(symbol: string, ...lists: { symbol: string; name: string }[][]) {
+  for (const l of lists) {
+    const hit = l.find((x) => x.symbol === symbol);
+    if (hit) return hit.name;
+  }
+  return symbol.replace(/\.(KS|KQ)$/, "");
+}

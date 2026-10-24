@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/page-header";
 import { AddRecordButton } from "@/components/add-record";
 import { QuerySelect } from "@/components/query-select";
 import { TradeList } from "@/components/trade-list";
+import { FilterChip } from "@/components/filter-chip";
+import { symbolName } from "@/lib/format";
 import { prisma } from "@/lib/db";
 import { dividendStocks, loadCashFlows, loadDividends, loadPrefs, loadTrades } from "@/lib/data";
 import { requireUserId } from "@/lib/session";
@@ -20,7 +22,7 @@ export const metadata = { title: "거래내역" };
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; market?: string; kind?: string; q?: string; sort?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ account?: string; market?: string; kind?: string; q?: string; symbol?: string; sort?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const account = params.account;
@@ -39,6 +41,8 @@ export default async function TransactionsPage({
   const order: TradeOrder = params.sort === "old" || params.sort === "new" ? params.sort : prefs.trades;
   // 국내(코스피·코스닥) / 해외(미국) 구분
   const q = (params.q ?? "").trim().toLowerCase();
+  // 종목 상세에서 넘어오면 그 종목만 (종목코드가 정확히 같은 것)
+  const symbol = params.symbol || undefined;
   // 조회 기간: 시작일 ~ 종료일 (기본: 한 달 전 ~ 오늘)
   const today = todayStr();
   const defaultFrom = rangeBounds("1M", today).from!;
@@ -50,14 +54,15 @@ export default async function TransactionsPage({
   const filtered = from !== defaultFrom || to !== today;
   const inRange = (d: string) => d >= from && d <= to;
   const inMarket = (m: string) => !market || (market === "us" ? m === "US" : m !== "US");
-  const matches = (name: string, symbol: string) =>
-    !q || name.toLowerCase().includes(q) || symbol.replace(/\.(KS|KQ)$/, "").toLowerCase().includes(q);
+  const matches = (name: string, s: string) =>
+    (!symbol || s === symbol) && (!q || name.toLowerCase().includes(q) || s.replace(/\.(KS|KQ)$/, "").toLowerCase().includes(q));
   // 배당: 시장·검색 조건을 따른다. 현금: 종목이 없으니 시장·검색을 걸면 뺀다
   const dividends = kind && kind !== "dividend" ? [] : allDividends.filter((d) => inRange(d.payDate) && inMarket(d.market) && matches(d.name, d.symbol));
-  const cashFlows = (kind && kind !== "cash") || market || q ? [] : allCash.filter((c) => inRange(c.date));
+  const cashFlows = (kind && kind !== "cash") || market || q || symbol ? [] : allCash.filter((c) => inRange(c.date));
   const trades = (kind && kind !== "trade" ? [] : allTrades)
     .filter((t) => t.tradeDate >= from && t.tradeDate <= to)
     .filter((t) => !market || (market === "us" ? t.market === "US" : t.market !== "US"))
+    .filter((t) => !symbol || t.symbol === symbol)
     // 종목 검색: 종목명 또는 종목코드(접미사 .KS/.KQ 제외)에 검색어가 들어 있으면
     .filter(
       (t) =>
@@ -108,6 +113,11 @@ export default async function TransactionsPage({
         <DateRangeFilter key={`${from}|${to}`} from={from} to={to} defaultFrom={defaultFrom} defaultTo={today} min={firstDate} />
         {allTrades.some((t) => t.market === "US") && market !== "kr" && <CurrencyToggle />}
       </div>
+      {symbol && (
+        <div className="mb-3">
+          <FilterChip label="종목" name="symbol" value={symbolName(symbol, allTrades, allDividends)} params={params} />
+        </div>
+      )}
       <TradeList
         trades={trades}
         dividends={dividends}
@@ -116,7 +126,7 @@ export default async function TransactionsPage({
         order={order}
         accounts={accounts}
         showAccount={!account}
-        emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 시작일을 앞당겨 보세요.") : undefined}
+        emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || symbol || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 시작일을 앞당겨 보세요.") : undefined}
       />
     </>
   );

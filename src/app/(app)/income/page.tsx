@@ -7,7 +7,8 @@ import { QuerySelect, QueryTabs } from "@/components/query-select";
 import { RangeFilter } from "@/components/range-bar";
 import { loadDividends, loadTrades } from "@/lib/data";
 import { prisma } from "@/lib/db";
-import { fmtKrw, fmtSigned, tone } from "@/lib/format";
+import { fmtKrw, fmtSigned, symbolName, tone } from "@/lib/format";
+import { FilterChip } from "@/components/filter-chip";
 import { dividendNetKrw, incomeByYear, realizedEvents } from "@/lib/income";
 import { todayStr } from "@/lib/market/service";
 import type { Market } from "@/lib/portfolio";
@@ -33,6 +34,7 @@ export default async function IncomePage({
     from?: string;
     to?: string;
     year?: string;
+    symbol?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -71,10 +73,11 @@ export default async function IncomePage({
         ) : (
           <IncomeView
             tab={tab}
-            params={params}
             accounts={accounts}
             account={account}
             market={market}
+            symbol={params.symbol || undefined}
+            params={params}
             trades={trades}
             allDividends={allDividends}
             accountName={accountName}
@@ -93,13 +96,15 @@ function IncomeView({
   accounts,
   account,
   market,
+  symbol,
   trades,
   allDividends,
   accountName,
   today,
 }: {
   tab: "realized" | "dividend";
-  params: { range?: string; from?: string; to?: string };
+  params: Record<string, string | undefined>;
+  symbol?: string;
   accounts: { id: string; name: string }[];
   account?: string;
   market?: MarketGroup;
@@ -109,10 +114,12 @@ function IncomeView({
   today: string;
 }) {
   // 실현손익은 계좌의 모든 매매로 평균단가를 따라가며 계산한 뒤 기간·시장으로 거른다
+  // 종목 상세에서 넘어오면 그 종목만
+  const ofSymbol = (s: string) => !symbol || s === symbol;
   const marketEvents = realizedEvents(trades)
     .reverse()
-    .filter((e) => inMarket(e.market, market));
-  const marketDividends = allDividends.filter((d) => inMarket(d.market, market));
+    .filter((e) => inMarket(e.market, market) && ofSymbol(e.symbol));
+  const marketDividends = allDividends.filter((d) => inMarket(d.market, market) && ofSymbol(d.symbol));
   const { range, custom } = parseRange(params);
   const { from, to } = rangeBounds(range, today, custom);
   const inRange = (date: string) => (!from || date >= from) && (!to || date <= to);
@@ -121,7 +128,7 @@ function IncomeView({
   const firstDate = [...marketEvents.map((e) => e.date), ...marketDividends.map((d) => d.payDate)].sort()[0];
   const period = range === "전체" ? "전체 기간" : `${dot(from ?? firstDate ?? today)} ~ ${dot(to ?? today)}`;
   const years = incomeByYear(marketEvents, marketDividends);
-  const keep = { ...(account ? { account } : {}), ...(market ? { market } : {}), ...(tab === "dividend" ? { tab } : {}) };
+  const keep = { ...(account ? { account } : {}), ...(market ? { market } : {}), ...(symbol ? { symbol } : {}), ...(tab === "dividend" ? { tab } : {}) };
   // 연도 표의 연도를 누르면 그 해 1/1 ~ 12/31을 직접입력으로 본다
   const yearHref = (y: string) => `?${new URLSearchParams({ ...keep, range: "custom", from: `${y}-01-01`, to: `${y}-12-31` })}`;
 
@@ -133,6 +140,11 @@ function IncomeView({
       <FilterRow accounts={accounts} account={account} extra={<MarketFilter value={market} />}>
         <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} shown={period} />
       </FilterRow>
+      {symbol && (
+        <div>
+          <FilterChip label="종목" name="symbol" value={symbolName(symbol, trades, allDividends)} params={params} />
+        </div>
+      )}
 
       {/* 탭마다 그 탭의 합계 카드 하나만 */}
       {tab === "realized" ? (
