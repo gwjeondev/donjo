@@ -2,7 +2,10 @@ import Link from "next/link";
 import { AccountFilter } from "@/components/account-filter";
 import { AddDividendButton, DeleteDividendButton, EditDividendButton, type DividendStock } from "@/components/dividend-form";
 import { PageHeader } from "@/components/page-header";
-import { QuerySelect, QueryTabs } from "@/components/query-select";
+import { QueryTabs } from "@/components/query-select";
+import { RangeFilter } from "@/components/range-bar";
+import { todayStr } from "@/lib/market/service";
+import { parseRange, rangeBounds } from "@/lib/range";
 import { loadDividends, loadTrades } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import { fmtKrw, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
@@ -17,7 +20,7 @@ const code = (symbol: string) => symbol.replace(/\.(KS|KQ)$/, "");
 export default async function IncomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string; year?: string; tab?: string }>;
+  searchParams: Promise<{ account?: string; tab?: string; range?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const account = params.account;
@@ -33,10 +36,18 @@ export default async function IncomePage({
   // 실현손익은 계좌의 모든 매매로 평균단가를 따라가며 계산한 뒤 연도로 거른다
   const allEvents = realizedEvents(trades).reverse();
   const years = incomeByYear(allEvents, allDividends);
-  const year = years.some((y) => y.year === params.year) ? params.year! : "";
-  const inYear = (date: string) => !year || date.startsWith(year);
-  const events = allEvents.filter((e) => inYear(e.date));
-  const dividends = allDividends.filter((d) => inYear(d.payDate));
+  // 조회 기간: 수익률 화면과 같은 버튼 (기본 전체)
+  const { range, custom } = parseRange(params, "전체");
+  const today = todayStr();
+  const { from, to } = rangeBounds(range, today, custom);
+  const inRange = (date: string) => (!from || date >= from) && (!to || date <= to);
+  const events = allEvents.filter((e) => inRange(e.date));
+  const dividends = allDividends.filter((d) => inRange(d.payDate));
+  const firstDate = [...allEvents.map((e) => e.date), ...allDividends.map((d) => d.payDate)].sort()[0];
+  const period = range === "전체" ? "전체 기간" : `${(from ?? firstDate ?? today).replaceAll("-", ".")} ~ ${(to ?? today).replaceAll("-", ".")}`;
+  // 연도 표의 연도를 누르면 그 해 1/1 ~ 12/31을 직접입력으로 본다
+  const yearHref = (y: string) =>
+    `?${new URLSearchParams({ ...(account ? { account } : {}), ...(tab === "dividend" ? { tab } : {}), range: "custom", from: `${y}-01-01`, to: `${y}-12-31` })}`;
 
   const realizedKrw = events.reduce((s, e) => s + e.pnlKrw, 0);
   const dividendKrw = dividends.reduce((s, d) => s + dividendNetKrw(d), 0);
@@ -58,12 +69,6 @@ export default async function IncomePage({
         toolbar={
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <AccountFilter accounts={accounts} value={account} />
-            <QuerySelect
-              name="year"
-              label="연도"
-              value={year}
-              options={[{ value: "", label: "전체 기간" }, ...years.map((y) => ({ value: y.year, label: `${y.year}년` }))]}
-            />
           </div>
         }
       >
@@ -71,6 +76,15 @@ export default async function IncomePage({
       </PageHeader>
 
       <div className="space-y-5">
+        <RangeFilter
+          key={`${range}|${custom.from}|${custom.to}`}
+          range={range}
+          custom={custom}
+          fallback="전체"
+          min={firstDate}
+          max={today}
+          shown={period}
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="card p-5">
             <p className="text-sm text-ink-2">실현손익</p>
@@ -85,11 +99,11 @@ export default async function IncomePage({
           <div className="card p-5">
             <p className="text-sm text-ink-2">합계</p>
             <p className={`mt-1 text-2xl font-bold ${tone(realizedKrw + dividendKrw)}`}>{fmtSigned(realizedKrw + dividendKrw)}</p>
-            <p className="mt-1 text-xs text-muted">{year ? `${year}년` : "전체 기간"}</p>
+            <p className="mt-1 text-xs text-muted">{period}</p>
           </div>
         </div>
 
-        {!year && years.length > 1 && (
+        {range === "전체" && years.length > 1 && (
           <section>
             <h2 className="mb-2 font-semibold">연도별</h2>
             <div className="card overflow-hidden">
@@ -106,7 +120,7 @@ export default async function IncomePage({
                   {years.map((y) => (
                     <tr key={y.year}>
                       <td className="px-4 py-2.5">
-                        <Link href={`?${new URLSearchParams({ ...(account ? { account } : {}), year: y.year, ...(tab === "dividend" ? { tab } : {}) })}`} className="text-brand hover:underline">
+                        <Link href={yearHref(y.year)} className="text-brand hover:underline">
                           {y.year}
                         </Link>
                       </td>

@@ -37,9 +37,9 @@ export const DEFAULT_RANGE: RangeId = "1M";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** 주소 → 조회 기간. ?range=1M|3M|YTD|1Y|all|custom&from=&to= (없으면 기본 1M) */
-export function parseRange(params: { range?: string; from?: string; to?: string }) {
+export function parseRange(params: { range?: string; from?: string; to?: string }, fallback: RangeId = DEFAULT_RANGE) {
   const raw = params.range === "custom" ? "직접" : params.range === "all" ? "전체" : params.range;
-  const range: RangeId = RANGE_IDS.includes(raw as RangeId) ? (raw as RangeId) : DEFAULT_RANGE;
+  const range: RangeId = RANGE_IDS.includes(raw as RangeId) ? (raw as RangeId) : fallback;
   const custom = {
     from: params.from && DATE.test(params.from) ? params.from : undefined,
     to: params.to && DATE.test(params.to) ? params.to : undefined,
@@ -48,9 +48,9 @@ export function parseRange(params: { range?: string; from?: string; to?: string 
 }
 
 /** 조회 기간 → 주소 쿼리 (기본값은 생략) */
-export function rangeQuery(range: RangeId, custom: { from?: string; to?: string }) {
+export function rangeQuery(range: RangeId, custom: { from?: string; to?: string }, fallback: RangeId = DEFAULT_RANGE) {
   const q: Record<string, string> = {};
-  if (range !== DEFAULT_RANGE) q.range = range === "직접" ? "custom" : range === "전체" ? "all" : range;
+  if (range !== fallback) q.range = range === "직접" ? "custom" : range === "전체" ? "all" : range;
   if (range === "직접") {
     if (custom.from) q.from = custom.from;
     if (custom.to) q.to = custom.to;
