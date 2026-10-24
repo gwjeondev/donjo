@@ -149,23 +149,26 @@ function IncomeView({
         <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} shown={period} />
       </FilterRow>
 
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <StatCard label="실현손익" value={fmtSigned(realizedKrw)} valueClass={tone(realizedKrw)} sub={`매도 ${events.length}건`} />
-          <StatCard label="배당금 (세후)" value={fmtSigned(dividendKrw)} valueClass={tone(dividendKrw)} sub={`${dividends.length}건`} />
-        </div>
-        {/* 합계는 위 두 값을 더한 것이라 카드 대신 한 줄로 */}
-        <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1 text-sm">
-          <span className="text-ink-2">
-            합계 <span className={`font-semibold ${tone(realizedKrw + dividendKrw)}`}>{fmtSigned(realizedKrw + dividendKrw)}</span>
-          </span>
-          <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
-            수익률 보기 →
-          </Link>
-        </p>
-      </div>
+      {/* 탭마다 그 탭의 합계 카드 하나만 */}
+      {tab === "realized" ? (
+        <StatCard
+          label="실현손익"
+          value={fmtSigned(realizedKrw)}
+          valueClass={tone(realizedKrw)}
+          sub={
+            <>
+              매도 {events.length}건 ·{" "}
+              <Link href={`/performance?${new URLSearchParams({ ...(account ? { account } : {}), ...rangeQuery(range, custom) })}`} className="text-brand hover:underline">
+                수익률 보기 →
+              </Link>
+            </>
+          }
+        />
+      ) : (
+        <StatCard label="배당금 (세후)" value={fmtSigned(dividendKrw)} valueClass={tone(dividendKrw)} sub={`${dividends.length}건`} />
+      )}
 
-      {range === "전체" && years.length > 1 && (
+      {range === "전체" && years.filter((y) => (tab === "realized" ? y.sells : y.dividendKrw)).length > 1 && (
         <section>
           <h2 className="mb-2 font-semibold">연도별</h2>
           <div className="card overflow-hidden">
@@ -173,23 +176,19 @@ function IncomeView({
               <thead className="border-b border-line bg-surface-2 text-xs text-ink-2">
                 <tr>
                   <th className="w-20 px-4 py-2.5 text-left font-medium">연도</th>
-                  <th className="px-2 py-2.5 text-right font-medium">실현손익</th>
-                  <th className="px-2 py-2.5 text-right font-medium">배당금</th>
-                  <th className="hidden px-4 py-2.5 text-right font-medium sm:table-cell">합계</th>
+                  <th className="px-4 py-2.5 text-right font-medium">{tab === "realized" ? "실현손익" : "배당금 (세후)"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {years.map((y) => (
+                {years.filter((y) => (tab === "realized" ? y.sells : y.dividendKrw)).map((y) => (
                   <tr key={y.year}>
                     <td className="px-4 py-2.5">
                       <Link href={yearHref(y.year)} className="text-brand hover:underline">
                         {y.year}
                       </Link>
                     </td>
-                    <td className={`truncate px-2 py-2.5 text-right ${tone(y.realizedKrw)}`}>{fmtSigned(y.realizedKrw)}</td>
-                    <td className={`truncate px-2 py-2.5 text-right ${tone(y.dividendKrw)}`}>{fmtSigned(y.dividendKrw)}</td>
-                    <td className={`hidden px-4 py-2.5 text-right font-medium sm:table-cell ${tone(y.realizedKrw + y.dividendKrw)}`}>
-                      {fmtSigned(y.realizedKrw + y.dividendKrw)}
+                    <td className={`truncate px-4 py-2.5 text-right font-medium ${tone(tab === "realized" ? y.realizedKrw : y.dividendKrw)}`}>
+                      {fmtSigned(tab === "realized" ? y.realizedKrw : y.dividendKrw)}
                     </td>
                   </tr>
                 ))}
