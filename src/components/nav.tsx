@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartIcon, HomeIcon, ListIcon, WalletIcon } from "./icons";
+import { ChartIcon, CoinIcon, HomeIcon, ListIcon, WalletIcon } from "./icons";
 
 const ITEMS = [
   { href: "/dashboard", label: "대시보드", Icon: HomeIcon },
   { href: "/accounts", label: "계좌", Icon: WalletIcon },
   { href: "/transactions", label: "매매기록", Icon: ListIcon },
   { href: "/performance", label: "수익률", Icon: ChartIcon },
+  { href: "/income", label: "손익", Icon: CoinIcon },
 ];
 
 export function SideNav() {
@@ -38,7 +39,7 @@ export function BottomNav() {
   const path = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {ITEMS.map(({ href, label, Icon }) => {
           const active = path.startsWith(href) || (href === "/dashboard" && path.startsWith("/stocks/"));
           return (

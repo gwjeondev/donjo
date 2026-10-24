@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const userId = await requireUserId();
   // 영문 이름으로 저장된 국내 종목은 증권사 표기 한글 이름으로 바꾼다 (실패해도 화면은 그대로 보여 준다)
   await localizeStockNames(userId).catch((e) => console.error("[names] 한글 이름 변환 실패:", e));
-  const [{ accounts, trades, positions, summary, fx, quotedAt }, perf, prefs] = await Promise.all([
+  const [{ accounts, trades, positions, summary, dividendKrw, fx, quotedAt }, perf, prefs] = await Promise.all([
     loadPortfolio(userId),
     loadPerformance(userId),
     loadPrefs(userId),
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
         <Welcome accounts={accounts} />
       ) : (
         <div className="space-y-4">
-          <SummaryCards summary={summary} />
+          <SummaryCards summary={summary} dividendKrw={dividendKrw} />
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <AssetChart points={cumulative(perf.daily)} failed={perf.failed} />
             <AllocationChart

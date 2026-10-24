@@ -13,7 +13,7 @@ import { requireUserId } from "@/lib/session";
 export default async function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const [{ accounts, trades, positions, summary, fx }, prefs] = await Promise.all([
+  const [{ accounts, trades, positions, summary, dividendKrw, fx }, prefs] = await Promise.all([
     loadPortfolio(userId, id),
     loadPrefs(userId),
   ]);
@@ -30,7 +30,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
         </PageHeader>
       </div>
       <div className="space-y-5">
-        <SummaryCards summary={summary} />
+        <SummaryCards summary={summary} dividendKrw={dividendKrw} />
         <Holdings positions={positions} totalValue={summary.valueKrw} usdKrw={fx.rate} sort={prefs.holdings} />
         <section>
           <div className="mb-2 flex items-center justify-between gap-3">

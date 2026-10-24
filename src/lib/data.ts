@@ -1,6 +1,7 @@
 // 페이지에서 쓰는 데이터 로딩 (DB 기록 + 시세 결합)
 import "server-only";
-import type { Transaction } from "@prisma/client";
+import type { Dividend as DividendRow, Transaction } from "@prisma/client";
+import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
@@ -35,6 +36,37 @@ export function toTrade(t: Transaction): Trade {
   };
 }
 
+export function toDividend(d: DividendRow): Dividend {
+  return {
+    id: d.id,
+    accountId: d.accountId,
+    symbol: d.symbol,
+    name: d.name,
+    market: d.market,
+    amount: Number(d.amount),
+    tax: Number(d.tax),
+    fxRate: Number(d.fxRate),
+    payDate: d.payDate.toISOString().slice(0, 10),
+    memo: d.memo,
+  };
+}
+
+/** 배당금 기록 (최근 지급일이 위) */
+export async function loadDividends(userId: string, accountId?: string) {
+  const rows = await prisma.dividend.findMany({
+    where: { account: { userId }, ...(accountId ? { accountId } : {}) },
+    orderBy: [{ payDate: "desc" }, { createdAt: "desc" }],
+  });
+  return rows.map(toDividend);
+}
+
+/** 날짜별 세후 배당금(원화) 합계 — 수익률 계산용 */
+function dividendsByDate(dividends: Dividend[]) {
+  const m = new Map<string, number>();
+  for (const d of dividends) m.set(d.payDate, (m.get(d.payDate) ?? 0) + dividendNetKrw(d));
+  return m;
+}
+
 export async function loadTrades(userId: string, accountId?: string) {
   const rows = await prisma.transaction.findMany({
     where: { account: { userId }, ...(accountId ? { accountId } : {}) },
@@ -44,9 +76,10 @@ export async function loadTrades(userId: string, accountId?: string) {
 }
 
 export async function loadPortfolio(userId: string, accountId?: string) {
-  const [accounts, trades] = await Promise.all([
+  const [accounts, trades, dividends] = await Promise.all([
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
     loadTrades(userId, accountId),
+    loadDividends(userId, accountId),
   ]);
   const positions = computePositions(trades);
   const held = positions.filter((p) => p.quantity > 0);
@@ -55,7 +88,9 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   // 화면에 보이는 시세 중 가장 오래된 것의 시각 ("n분 전 시세" 표시용)
   const times = [...quotes.values()].flatMap((q) => (q.fetchedAt ? [q.fetchedAt.getTime()] : []));
   const quotedAt = times.length ? new Date(Math.min(...times)).toISOString() : null;
-  return { accounts, trades, positions: valued, summary: summarize(valued), fx, quotedAt };
+  /** 받은 배당금 합계 (세후, 원화) */
+  const dividendKrw = dividends.reduce((s, d) => s + dividendNetKrw(d), 0);
+  return { accounts, trades, positions: valued, summary: summarize(valued), dividendKrw, fx, quotedAt };
 }
 
 /** 수익률 시계열. 시세·일봉 조회가 실패해도 페이지 전체가 깨지지 않도록 failed로 알린다 */
@@ -75,7 +110,7 @@ const EMPTY_PERFORMANCE = {
 };
 
 async function computePerformance(userId: string, accountId?: string) {
-  const trades = await loadTrades(userId, accountId);
+  const [trades, dividends] = await Promise.all([loadTrades(userId, accountId), loadDividends(userId, accountId)]);
   if (trades.length === 0) return EMPTY_PERFORMANCE;
   const from = trades.reduce((m, t) => (t.tradeDate < m ? t.tradeDate : m), trades[0].tradeDate);
   const prices = await getPriceSeries([...trades.map((t) => t.symbol), ...Object.values(BENCHMARKS)], from);
@@ -86,7 +121,7 @@ async function computePerformance(userId: string, accountId?: string) {
     if (!prices.has(s)) prices.set(s, new Map());
     prices.get(s)!.set(today, q.price);
   }
-  const daily = buildDailySeries(trades, prices, today);
+  const daily = buildDailySeries(trades, prices, today, dividendsByDate(dividends));
   const benchmark = benchmarkSeries(
     daily,
     Object.fromEntries(Object.entries(BENCHMARKS).map(([k, sym]) => [k, prices.get(sym) ?? new Map<string, number>()])),

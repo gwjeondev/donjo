@@ -45,6 +45,8 @@ export function buildDailySeries(
   trades: Trade[],
   prices: PriceSeries,
   today: string,
+  /** 날짜별 받은 배당금 (세후, 원화). 계좌 밖으로 나간 돈으로 보고 그날 손익에 더한다 */
+  dividends: Map<string, number> = new Map(),
 ): DailyPoint[] {
   const sorted = sortTrades(trades);
   if (sorted.length === 0) return [];
@@ -64,6 +66,12 @@ export function buildDailySeries(
     let flow = 0;
     let bought = 0;
     let hasTrade = false;
+    const dividend = dividends.get(date) ?? 0;
+    if (dividend) {
+      // 배당금은 매도대금처럼 인출로 본다: 평가금액은 그대로인데 돈이 나갔으니 그만큼이 수익
+      flow -= dividend;
+      hasTrade = true;
+    }
     while (ti < sorted.length && sorted[ti].tradeDate === date) {
       const t = sorted[ti++];
       hasTrade = true;

@@ -238,6 +238,64 @@ export async function deleteTransaction(id: string): Promise<FormState> {
   return { ok: true };
 }
 
+// ---------- 배당금 ----------
+
+const dividendSchema = z.object({
+  accountId: z.string().min(1, "계좌를 선택하세요"),
+  /** "심볼|시장|이름" — 그 계좌에서 거래한 종목 중에서 고른다 */
+  stock: z.string().min(1, "종목을 선택하세요"),
+  amount: num("배당금을 입력하세요").positive("배당금은 0보다 커야 해요"),
+  tax: num("세금이 올바르지 않아요").min(0, "세금이 올바르지 않아요").default(0),
+  fxRate: num("환율이 올바르지 않아요").positive("환율을 입력하세요"),
+  payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "지급일을 입력하세요"),
+  memo: z.string().max(200).optional(),
+});
+
+export async function saveDividend(_: FormState, form: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const market = str(form, "stock").split("|")[1];
+  const parsed = dividendSchema.safeParse({
+    accountId: str(form, "accountId"),
+    stock: str(form, "stock"),
+    amount: str(form, "amount").replaceAll(",", ""),
+    tax: str(form, "tax").replaceAll(",", "") || 0,
+    fxRate: market === "US" ? str(form, "fxRate").replaceAll(",", "") : 1,
+    payDate: str(form, "payDate"),
+    memo: str(form, "memo") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { stock, ...data } = parsed.data;
+  if (data.tax > data.amount) return { error: "세금이 배당금보다 클 수 없어요" };
+  const account = await prisma.account.findFirst({ where: { id: data.accountId, userId } });
+  if (!account) return { error: "계좌를 찾을 수 없어요" };
+  // 종목은 그 계좌에서 거래한 적이 있는 것만 받는다
+  const symbol = stock.split("|")[0];
+  const traded = await prisma.transaction.findFirst({ where: { accountId: data.accountId, symbol }, orderBy: { tradeDate: "desc" } });
+  if (!traded) return { error: "이 계좌에서 거래한 종목만 선택할 수 있어요" };
+  const record = {
+    ...data,
+    symbol,
+    name: traded.name,
+    market: traded.market,
+    payDate: new Date(`${data.payDate}T00:00:00Z`),
+  };
+  const id = str(form, "id");
+  if (id) {
+    const own = await prisma.dividend.findFirst({ where: { id, account: { userId } } });
+    if (!own) return { error: "배당 기록을 찾을 수 없어요" };
+    await prisma.dividend.update({ where: { id }, data: record });
+  } else {
+    await prisma.dividend.create({ data: record });
+  }
+  return { ok: true };
+}
+
+export async function deleteDividend(id: string): Promise<FormState> {
+  const userId = await requireUserId();
+  const { count } = await prisma.dividend.deleteMany({ where: { id, account: { userId } } });
+  return count ? { ok: true } : { error: "배당 기록을 찾을 수 없어요" };
+}
+
 // ---------- 시세 ----------
 
 /** 보유 종목과 환율 시세를 다시 받아 온다. 외부 API·DB 부담을 줄이려고 1분 이내 시세는 그대로 쓴다 */

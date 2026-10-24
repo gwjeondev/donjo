@@ -28,6 +28,7 @@ model Account {
   memo         String?
   createdAt    DateTime      @default(now())
   transactions Transaction[]
+  dividends    Dividend[]
 
   @@index([userId])
 }
@@ -64,6 +65,27 @@ model Transaction {
   createdAt DateTime  @default(now())
 
   @@index([accountId, tradeDate])
+}
+
+/// 배당금 입금 기록. 금액은 종목의 현지 통화(KRW 또는 USD) 기준.
+model Dividend {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol    String
+  name      String
+  market    Market
+  /// 세전 배당금 합계
+  amount    Decimal  @db.Decimal(20, 4)
+  /// 원천징수 세금
+  tax       Decimal  @default(0) @db.Decimal(20, 4)
+  /// 지급일 환율 (1 USD 당 KRW). KRW 종목은 1.
+  fxRate    Decimal  @default(1) @db.Decimal(20, 4)
+  payDate   DateTime @db.Date
+  memo      String?
+  createdAt DateTime @default(now())
+
+  @@index([accountId, payDate])
 }
 
 /// 일별 종가 캐시 (환율 KRW=X 포함)
