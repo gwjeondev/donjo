@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer,
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
 import { periodBounds } from "@/lib/range";
 import { DetailCard, NameLink } from "./detail-card";
+import { InfoTip } from "./info-tip";
 import { aggregate, type DailyPoint, type PeriodRow } from "@/lib/performance";
 
 const TABS = [
@@ -61,7 +62,17 @@ export function PerformanceView({
       ) : (
         <>
           <div className="card p-5">
-            <h2 className="mb-3 font-semibold">기간별 수익률</h2>
+            <h2 className="mb-3 flex items-center gap-1 font-semibold">
+              기간별 수익률
+              <InfoTip title="기간별 수익률">
+                <p>기간을 누르면 그 기간의 거래내역을 보여 줘요.</p>
+                <p>
+                  <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고, <b>자산 증가율</b>은 추가 매수까지
+                  포함한 평가금액의 단순 증감률이에요.
+                </p>
+                <p>투자 손익 = 기말 − 기초 − 순투입으로, 아직 팔지 않은 종목의 평가 변화까지 들어가요. 매도로 확정된 손익은 손익 화면에서 볼 수 있어요.</p>
+              </InfoTip>
+            </h2>
             <div className="h-56">
               <ResponsiveContainer>
                 <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -160,10 +171,6 @@ export function PerformanceView({
               ))}
             </ul>
           </div>
-          <p className="text-xs leading-relaxed text-muted">
-            기간을 누르면 그 기간의 거래내역을 보여 줘요. <b>수익률</b>은 매수·매도로 인한 돈의 유입·유출을 제외한 순수 투자 성과(시간가중수익률)이고,{" "}
-            <b>자산 증가율</b>은 추가 매수까지 포함한 평가금액의 단순 증감률이에요. 투자 손익 = 기말 − 기초 − 순투입으로, 아직 팔지 않은 종목의 평가 변화까지 들어가요. 매도로 확정된 손익은 손익 화면에서 볼 수 있어요.
-          </p>
         </>
       )}
     </div>

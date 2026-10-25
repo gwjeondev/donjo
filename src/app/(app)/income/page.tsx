@@ -11,6 +11,7 @@ import { loadDividends, loadTrades } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import { fmtKrw, fmtSigned, symbolName, tone } from "@/lib/format";
 import { FilterChip } from "@/components/filter-chip";
+import { InfoTip } from "@/components/info-tip";
 import { dividendNetKrw, incomeByYear, realizedEvents } from "@/lib/income";
 import { todayStr } from "@/lib/market/service";
 import type { Market } from "@/lib/portfolio";
@@ -199,7 +200,20 @@ function IncomeView({
 
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold">{tab === "realized" ? `매도 내역 ${events.length}건` : `배당 내역 ${dividends.length}건`}</h2>
+          <h2 className="flex items-center gap-1 font-semibold">
+            {tab === "realized" ? `매도 내역 ${events.length}건` : `배당 내역 ${dividends.length}건`}
+            {tab === "realized" ? (
+              <InfoTip title="실현손익">
+                <p>실현손익 = 매도 대금(수수료·세금 뺀 금액) − 판 수량의 평균 매입금액이에요.</p>
+                <p>해외 주식은 매도일 환율과 매수일 환율로 원화 환산해요. 달러로 보면 환율 영향을 뺀 달러 기준 손익·수익률이에요.</p>
+              </InfoTip>
+            ) : (
+              <InfoTip title="배당금">
+                <p>받은 금액은 세금을 뺀 세후 금액이에요.</p>
+                <p>해외 배당은 지급일 환율로 원화 환산해요. 달러로 보면 달러 금액 그대로예요.</p>
+              </InfoTip>
+            )}
+          </h2>
           {/* 해외 종목 내역은 원화/달러로 볼 수 있다 (합계 카드는 원화) */}
           {(tab === "realized" ? events.some((e) => e.currency === "USD") : dividends.some((d) => d.market === "US")) && <CurrencyToggle />}
         </div>
@@ -214,10 +228,6 @@ function IncomeView({
         ) : (
           <DividendList dividends={dividends} accountName={Object.fromEntries(accountName)} showAccount={!account} />
         )}
-        <p className="text-xs leading-relaxed text-muted">
-          실현손익 = 매도 대금(수수료·세금 뺀 금액) − 판 수량의 평균 매입금액. 해외 주식은 매도일 환율과 매수일 환율로 원화 환산해요. 달러로 보면 환율 영향을 뺀 달러 기준 손익·수익률이에요. 배당금은 세후
-          금액이에요.
-        </p>
       </section>
     </>
   );
@@ -286,26 +296,28 @@ function TaxView({
       </div>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">해외주식 매도 {sales.length}건</h2>
+        <h2 className="flex items-center gap-1 font-semibold">
+          해외주식 매도 {sales.length}건
+          <InfoTip title="양도세 계산">
+            <p>
+              해외 상장 주식(미국 주식 등)만 계산해요. 1년 동안의 이익과 손실을 합친 뒤 기본공제 250만 원을 빼고 22%(양도소득세 20% + 지방소득세
+              2%)를 곱한 예상액이에요.
+            </p>
+            <p>
+              취득가액은 이동평균(평균 매입단가)으로 계산해요. 실현손익 탭, 증권사 앱에서 팔 때 보이는 손익과 같은 기준이에요. 원화 환산은 기록한
+              매수·매도 환율을 써서, 결제일 환율로 하는 실제 신고와는 조금 다를 수 있어요.
+            </p>
+            <p>
+              국내 상장 해외 ETF(예: KODEX 미국나스닥100)의 매매차익은 양도세가 아니라 배당소득세(15.4%) 대상이라 여기에 넣지 않았고, 국내 주식은
+              대주주가 아니면 양도세가 없어요. 실제 신고 전에는 증권사 양도세 계산 자료나 세무 전문가로 확인해 주세요.
+            </p>
+          </InfoTip>
+        </h2>
         {sales.length === 0 ? (
           <p className="card p-8 text-center text-sm text-muted">{year}년에는 해외 주식을 판 기록이 없어요.</p>
         ) : (
           <TaxSaleList sales={sales} accountName={accountName} showAccount={!account} />
         )}
-        <div className="space-y-1 text-xs leading-relaxed text-muted">
-          <p>
-            해외 상장 주식(미국 주식 등)만 계산해요. 1년 동안의 이익과 손실을 합친 뒤 기본공제 250만 원을 빼고 22%(양도소득세 20% + 지방소득세
-            2%)를 곱한 예상액이에요.
-          </p>
-          <p>
-            취득가액은 이동평균(평균 매입단가)으로 계산해요. 실현손익 탭, 증권사 앱에서 팔 때 보이는 손익과 같은 기준이에요. 원화 환산은 기록한
-            매수·매도 환율을 써서, 결제일 환율로 하는 실제 신고와는 조금 다를 수 있어요.
-          </p>
-          <p>
-            국내 상장 해외 ETF(예: KODEX 미국나스닥100)의 매매차익은 양도세가 아니라 배당소득세(15.4%) 대상이라 여기에 넣지 않았고, 국내 주식은
-            대주주가 아니면 양도세가 없어요. 실제 신고 전에는 증권사 양도세 계산 자료나 세무 전문가로 확인해 주세요.
-          </p>
-        </div>
       </section>
     </>
   );
