@@ -63,7 +63,8 @@ function events(flows: CashFlow[], allTrades: Trade[], allDividends: Dividend[],
     // 연동을 켠 뒤에 기록한 것만 (이미 있던 기록은 현금을 바꾸지 않는다)
     const after = (created?: string) => !since || (created ?? "") >= since;
     const trades = allTrades.filter((t) => after(t.createdAt));
-    const dividends = allDividends.filter((d) => after(d.createdAt));
+    // 자동 배당은 앱이 나중에 만들기도 하므로 기록 시각이 아니라 지급일로 본다
+    const dividends = allDividends.filter((d) => (d.auto ? !since || d.payDate >= since.slice(0, 10) : after(d.createdAt)));
     // 같은 날에는 입출금 → 매매 → 배당 순서
     sortTrades(trades).forEach((t, i) =>
       ev.push({ date: t.tradeDate, order: 1, created: String(i).padStart(8, "0"), accountId: t.accountId, run: (b) => applyTrade(b, t) }),

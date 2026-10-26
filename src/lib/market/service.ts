@@ -3,10 +3,11 @@ import "server-only";
 import { prisma } from "../db";
 import { addDays, FX_SYMBOL, type PriceSeries } from "../performance";
 import { koreanSource, provider } from ".";
-import type { Quote } from "./types";
+import type { DividendEvent, Quote } from "./types";
 
 const QUOTE_TTL_MS = 10 * 60 * 1000;
 const BARS_TTL_MS = 6 * 60 * 60 * 1000;
+const DIVIDENDS_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_USD_KRW = 1350;
 
 const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -234,4 +235,35 @@ export async function detectKoreanExchange(code: string): Promise<{ market: "KOS
     if (ok) return { market, name: info?.name ?? null };
   }
   return { market: null, name: info?.name ?? null };
+}
+
+/** 종목별 배당 이력 (배당락일·주당 배당금). 하루에 한 번만 외부에서 다시 받고, 실패하면 저장된 이력을 쓴다 */
+export async function getDividendEvents(symbols: string[]): Promise<Map<string, DividendEvent[]>> {
+  const unique = [...new Set(symbols)];
+  const out = new Map<string, DividendEvent[]>();
+  if (unique.length === 0) return out;
+  const caches = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } }, select: { symbol: true, divFetchedAt: true } });
+  const fresh = new Set(caches.filter((c) => c.divFetchedAt && Date.now() - c.divFetchedAt.getTime() < DIVIDENDS_TTL_MS).map((c) => c.symbol));
+  await Promise.all(
+    unique
+      .filter((s) => !fresh.has(s))
+      .map(async (symbol) => {
+        try {
+          const events = await provider.dividends(symbol, "2000-01-01");
+          await prisma.$transaction([
+            prisma.dividendEvent.deleteMany({ where: { symbol } }),
+            prisma.dividendEvent.createMany({ data: events.map((e) => ({ symbol, exDate: toDate(e.exDate), amount: e.amount })), skipDuplicates: true }),
+            prisma.symbolCache.upsert({ where: { symbol }, create: { symbol, divFetchedAt: new Date() }, update: { divFetchedAt: new Date() } }),
+          ]);
+        } catch (e) {
+          console.warn(`[market] 배당 이력 실패 ${symbol}:`, (e as Error).message);
+        }
+      }),
+  );
+  const rows = await prisma.dividendEvent.findMany({ where: { symbol: { in: unique } }, orderBy: { exDate: "asc" } });
+  for (const r of rows) {
+    if (!out.has(r.symbol)) out.set(r.symbol, []);
+    out.get(r.symbol)!.push({ exDate: fromDate(r.exDate), amount: Number(r.amount) });
+  }
+  return out;
 }

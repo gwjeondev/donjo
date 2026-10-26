@@ -5,6 +5,7 @@ import { cashBalances, cashTimeline, totalCash, type CashFlow } from "./cash";
 import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
+import { syncAutoDividends } from "./auto-dividends";
 import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
 import { addDays, benchmarkSeries, buildDailySeries, FX_SYMBOL, type DailyPoint } from "./performance";
 
@@ -55,6 +56,8 @@ export function toDividend(d: DividendRow): Dividend {
     fxRate: Number(d.fxRate),
     payDate: d.payDate.toISOString().slice(0, 10),
     createdAt: d.createdAt.toISOString(),
+    auto: d.auto,
+    exDate: d.exDate ? d.exDate.toISOString().slice(0, 10) : null,
     memo: d.memo,
   };
 }
@@ -84,6 +87,8 @@ export async function loadCashFlows(userId: string, accountId?: string) {
 
 /** 배당금 기록 (최근 지급일이 위) */
 export async function loadDividends(userId: string, accountId?: string) {
+  // 배당 이력으로 자동 배당을 먼저 맞춘다 (실패해도 저장된 기록으로 보여 준다)
+  await syncAutoDividends(userId);
   const rows = await prisma.dividend.findMany({
     where: { account: { userId }, ...(accountId ? { accountId } : {}) },
     orderBy: [{ payDate: "desc" }, { createdAt: "desc" }],

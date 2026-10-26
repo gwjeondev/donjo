@@ -1,7 +1,7 @@
 // Yahoo Finance 비공식 공개 엔드포인트 (무료, API 키 불필요, 약 15~20분 지연).
 // 코스피: 005930.KS / 코스닥: 035720.KQ / 미국: AAPL / 원달러 환율: KRW=X
 import type { Market } from "../portfolio";
-import type { Bar, MarketDataProvider, Quote, SymbolSearchResult } from "./types";
+import type { Bar, DividendEvent, MarketDataProvider, Quote, SymbolSearchResult } from "./types";
 
 const HEADERS = {
   "User-Agent":
@@ -21,6 +21,7 @@ interface ChartResponse {
       };
       timestamp?: number[];
       indicators: { quote: { close?: (number | null)[] }[] };
+      events?: { dividends?: Record<string, { amount: number; date: number }> };
     }[];
     error?: { description?: string } | null;
   };
@@ -74,6 +75,17 @@ export const yahooProvider: MarketDataProvider = {
       if (date >= from) bars.push({ date, close });
     });
     return bars;
+  },
+
+  async dividends(symbol, from): Promise<DividendEvent[]> {
+    const period1 = Math.floor(new Date(`${from}T00:00:00Z`).getTime() / 1000) - 86400;
+    const period2 = Math.floor(Date.now() / 1000) + 86400;
+    const r = await chart(symbol, { period1: String(period1), period2: String(period2), events: "div" });
+    const offset = r.meta.gmtoffset ?? 0;
+    return Object.values(r.events?.dividends ?? {})
+      .map((d) => ({ exDate: new Date((d.date + offset) * 1000).toISOString().slice(0, 10), amount: d.amount }))
+      .filter((d) => d.exDate >= from && d.amount > 0)
+      .sort((a, b) => a.exDate.localeCompare(b.exDate));
   },
 
   async search(query): Promise<SymbolSearchResult[]> {

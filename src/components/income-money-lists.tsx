@@ -97,7 +97,9 @@ export function DividendList({ dividends, accountName, showAccount }: { dividend
               {showAccount && <td className="truncate px-3 py-3 text-ink-2">{accountName[d.accountId]}</td>}
               <td className="px-3 py-3" title={d.name}>
                 <span className="block truncate">{d.name}</span>
-                {d.memo && <div className="truncate text-xs text-muted">{d.memo}</div>}
+                {(d.auto || d.memo) && (
+                  <div className="truncate text-xs text-muted">{[d.auto && `자동 · 배당락 ${d.exDate}`, d.memo].filter(Boolean).join(" · ")}</div>
+                )}
               </td>
               <td className="px-3 py-3 text-right">{fmtPrice(amount, cur)}</td>
               <td className="px-3 py-3 text-right text-ink-2">{tax ? fmtPrice(tax, cur) : "-"}</td>
@@ -113,6 +115,7 @@ export function DividendList({ dividends, accountName, showAccount }: { dividend
             ["세금", tax ? fmtPrice(tax, cur) : "-"],
           ];
           if (d.market === "US") r.push(["환율", `${fmtQty(d.fxRate)}원`]);
+          if (d.auto) r.push(["자동 기록", `배당락 ${d.exDate}`]);
           if (d.memo) r.push(["메모", d.memo]);
           return (
             <DetailCard

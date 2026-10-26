@@ -205,6 +205,12 @@ export function EditDividendButton({ accounts, stocks, dividend }: { accounts: A
         <EditIcon className="size-4" />
       </button>
       <Dialog title="배당금 수정" open={open} onClose={() => setOpen(false)}>
+        {dividend.auto && (
+          <p className="mb-4 rounded-lg bg-surface-2 p-3 text-xs leading-relaxed text-ink-2" data-wrap="ok">
+            배당 이력으로 자동으로 만든 기록이에요(배당락 {dividend.exDate}). 증권사 입금 내역에 맞게 고치면 직접 넣은 기록으로 바뀌어 다시 덮어쓰지 않아요.
+            지우면 다시 만들지 않아요.
+          </p>
+        )}
         <DividendForm accounts={accounts} stocks={stocks} initial={dividend} onDone={() => setOpen(false)} />
       </Dialog>
     </>

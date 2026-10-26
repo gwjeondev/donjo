@@ -15,6 +15,7 @@ import { addDays } from "@/lib/performance";
 import { FX_SYMBOL } from "@/lib/performance";
 import { fmtQty } from "@/lib/format";
 import { readPrefs, type Prefs } from "@/lib/prefs";
+import { markDividendsStale } from "@/lib/auto-dividends";
 import { computePositions, findOversell, oversellAt, quantityAt, sortTrades, type Trade } from "@/lib/portfolio";
 import { prisma } from "@/lib/db";
 import { requireUserId } from "@/lib/session";
@@ -85,6 +86,7 @@ const accountSchema = z.object({
   name: z.string().min(1, "계좌 이름을 입력하세요").max(50),
   broker: z.string().max(50).optional(),
   memo: z.string().max(200).optional(),
+  kind: z.enum(["GENERAL", "ISA", "PENSION"]).default("GENERAL"),
 });
 
 export async function saveAccount(_: FormState, form: FormData): Promise<FormState> {
@@ -93,8 +95,11 @@ export async function saveAccount(_: FormState, form: FormData): Promise<FormSta
     name: str(form, "name"),
     broker: str(form, "broker") || undefined,
     memo: str(form, "memo") || undefined,
+    kind: str(form, "kind") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  // 계좌 종류가 바뀌면 자동 배당 세금이 달라진다
+  markDividendsStale(userId);
   const id = str(form, "id");
   if (id) {
     const res = await prisma.account.updateMany({ where: { id, userId }, data: parsed.data });
@@ -207,6 +212,7 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
   const record = { ...data, tradeDate: new Date(`${data.tradeDate}T00:00:00Z`) };
   if (id) {
     await prisma.transaction.update({ where: { id }, data: record });
+    markDividendsStale(userId);
     // 종목명을 고쳤다면 같은 종목의 다른 기록에도 맞춘다
     await prisma.transaction.updateMany({
       where: { account: { userId }, symbol: data.symbol, NOT: { name: data.name } },
@@ -220,6 +226,7 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
       select: { name: true },
     });
     await prisma.transaction.create({ data: { ...record, name: named?.name ?? data.name } });
+    markDividendsStale(userId);
   }
   return { ok: true };
 }
@@ -235,6 +242,7 @@ export async function deleteTransaction(id: string): Promise<FormState> {
     return { error: "이 매수 기록을 지우면 이후 매도 수량이 보유 수량을 넘어요. 매도 기록을 먼저 삭제해 주세요." };
   }
   await prisma.transaction.delete({ where: { id } });
+  markDividendsStale(userId);
   return { ok: true };
 }
 
@@ -283,7 +291,7 @@ export async function saveDividend(_: FormState, form: FormData): Promise<FormSt
   if (id) {
     const own = await prisma.dividend.findFirst({ where: { id, account: { userId } } });
     if (!own) return { error: "배당 기록을 찾을 수 없어요" };
-    await prisma.dividend.update({ where: { id }, data: record });
+    await prisma.dividend.update({ where: { id }, data: { ...record, auto: false } });
   } else {
     await prisma.dividend.create({ data: record });
   }
@@ -292,8 +300,22 @@ export async function saveDividend(_: FormState, form: FormData): Promise<FormSt
 
 export async function deleteDividend(id: string): Promise<FormState> {
   const userId = await requireUserId();
-  const { count } = await prisma.dividend.deleteMany({ where: { id, account: { userId } } });
-  return count ? { ok: true } : { error: "배당 기록을 찾을 수 없어요" };
+  const own = await prisma.dividend.findFirst({ where: { id, account: { userId } } });
+  if (!own) return { error: "배당 기록을 찾을 수 없어요" };
+  await prisma.$transaction([
+    prisma.dividend.delete({ where: { id } }),
+    // 자동 배당을 지우면 다시 만들지 않는다
+    ...(own.exDate
+      ? [
+          prisma.dividendSkip.upsert({
+            where: { accountId_symbol_exDate: { accountId: own.accountId, symbol: own.symbol, exDate: own.exDate } },
+            create: { accountId: own.accountId, symbol: own.symbol, exDate: own.exDate },
+            update: {},
+          }),
+        ]
+      : []),
+  ]);
+  return { ok: true };
 }
 
 // ---------- 현금 입출금·환전 ----------
@@ -544,6 +566,7 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       data: newCash.map((c) => ({ ...c, accountId: realId.get(c.accountId) ?? c.accountId, date: new Date(`${c.date}T00:00:00Z`) })),
     });
   });
+  markDividendsStale(userId);
   const parts = [`${incoming.length + newDivs.length + newCash.length}건 추가`];
   if (newDivs.length || newCash.length) parts[0] += ` (매매 ${incoming.length} · 배당 ${newDivs.length} · 현금 ${newCash.length})`;
   if (skipped) parts.push(`중복 ${skipped}건 건너뜀`);

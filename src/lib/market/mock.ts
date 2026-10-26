@@ -57,6 +57,20 @@ export const mockProvider: MarketDataProvider = {
       currency: symbol === "KRW=X" ? "KRW" : symbol.includes(".K") ? "KRW" : "USD",
     };
   },
+  // 분기마다 배당 (미국: 2·5·8·11월 10일, 국내: 3·6·9·12월 27일). 종목마다 금액이 다르고 일부 종목은 배당이 없다
+  async dividends(symbol, from) {
+    const h = hash(symbol);
+    if (symbol === "KRW=X" || h % 4 === 0) return [];
+    const kr = symbol.includes(".K");
+    const out: { exDate: string; amount: number }[] = [];
+    for (let y = Number(from.slice(0, 4)); y <= Number(today().slice(0, 4)); y++) {
+      for (const m of kr ? [3, 6, 9, 12] : [2, 5, 8, 11]) {
+        const exDate = `${y}-${String(m).padStart(2, "0")}-${kr ? "27" : "10"}`;
+        if (exDate >= from && exDate <= today()) out.push({ exDate, amount: kr ? 100 + (h % 5) * 100 : 0.2 + (h % 5) / 10 });
+      }
+    }
+    return out;
+  },
   async history(symbol, from) {
     return [...weekdays(from, today())].map((date) => ({ date, close: priceOn(symbol, date) }));
   },

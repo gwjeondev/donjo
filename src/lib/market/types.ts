@@ -15,6 +15,12 @@ export interface Bar {
   close: number;
 }
 
+/** 배당 이력 한 건: 배당락일과 주당 배당금 (현지 통화, 분할 반영된 지금 주식 수 기준) */
+export interface DividendEvent {
+  exDate: string;
+  amount: number;
+}
+
 export interface SymbolSearchResult {
   symbol: string;
   name: string;
@@ -28,4 +34,6 @@ export interface MarketDataProvider {
   /** from 이후(포함) 일봉 종가 */
   history(symbol: string, from: string): Promise<Bar[]>;
   search(query: string): Promise<SymbolSearchResult[]>;
+  /** from 이후(포함) 배당락일의 주당 배당금 */
+  dividends(symbol: string, from: string): Promise<DividendEvent[]>;
 }
