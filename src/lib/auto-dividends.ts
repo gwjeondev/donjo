@@ -13,25 +13,33 @@ import { toTrade } from "./data";
 const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
-// 같은 요청에서 여러 번 불려도 한 번만 (대시보드는 자산·수익률을 동시에 읽는다), 1분 안에는 다시 하지 않는다
-const running = new Map<string, Promise<void>>();
-const doneAt = new Map<string, number>();
+const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
 
+// 같은 서버에서 동시에 여러 번 불려도 한 번만 (대시보드는 자산·수익률을 동시에 읽는다)
+const running = new Map<string, Promise<void>>();
+
+/**
+ * 자동 배당 맞추기. 하루(한국 날짜)에 한 번만 하고, 매매·계좌 종류가 바뀌면 다음 조회 때 바로 한다.
+ * 화면을 열 때는 마지막으로 맞춘 시각 하나만 읽는다.
+ */
 export function syncAutoDividends(userId: string): Promise<void> {
-  if (Date.now() - (doneAt.get(userId) ?? 0) < 60_000) return Promise.resolve();
   const inflight = running.get(userId);
   if (inflight) return inflight;
-  const p = sync(userId)
-    .then(() => void doneAt.set(userId, Date.now()))
+  const p = (async () => {
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { dividendsSyncedAt: true } });
+    if (u?.dividendsSyncedAt && kstDay(u.dividendsSyncedAt) === kstDay(new Date())) return;
+    await sync(userId);
+    await prisma.user.update({ where: { id: userId }, data: { dividendsSyncedAt: new Date() } });
+  })()
     .catch((e) => console.error("[dividends] 자동 배당 갱신 실패:", (e as Error).message))
     .finally(() => running.delete(userId));
   running.set(userId, p);
   return p;
 }
 
-/** 거래·계좌 종류가 바뀌면 다음 조회 때 바로 다시 맞추도록 */
-export function markDividendsStale(userId: string) {
-  doneAt.delete(userId);
+/** 매매·계좌 종류가 바뀌면 다음 조회 때 다시 맞추도록 표시만 해 둔다 */
+export async function markDividendsStale(userId: string) {
+  await prisma.user.update({ where: { id: userId }, data: { dividendsSyncedAt: null } });
 }
 
 async function sync(userId: string) {

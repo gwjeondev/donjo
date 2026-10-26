@@ -14,6 +14,8 @@ model User {
   passwordHash String
   /// 화면 설정 (목록 정렬 기준 등). 형식은 src/lib/prefs.ts
   prefs        Json?
+  /// 자동 배당을 마지막으로 맞춘 시각 (하루 한 번, 기록이 바뀌면 비운다)
+  dividendsSyncedAt DateTime?
   createdAt    DateTime  @default(now())
   accounts     Account[]
 }

@@ -99,7 +99,7 @@ export async function saveAccount(_: FormState, form: FormData): Promise<FormSta
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   // 계좌 종류가 바뀌면 자동 배당 세금이 달라진다
-  markDividendsStale(userId);
+  await markDividendsStale(userId);
   const id = str(form, "id");
   if (id) {
     const res = await prisma.account.updateMany({ where: { id, userId }, data: parsed.data });
@@ -212,7 +212,7 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
   const record = { ...data, tradeDate: new Date(`${data.tradeDate}T00:00:00Z`) };
   if (id) {
     await prisma.transaction.update({ where: { id }, data: record });
-    markDividendsStale(userId);
+    await markDividendsStale(userId);
     // 종목명을 고쳤다면 같은 종목의 다른 기록에도 맞춘다
     await prisma.transaction.updateMany({
       where: { account: { userId }, symbol: data.symbol, NOT: { name: data.name } },
@@ -226,7 +226,7 @@ export async function saveTransaction(_: FormState, form: FormData): Promise<For
       select: { name: true },
     });
     await prisma.transaction.create({ data: { ...record, name: named?.name ?? data.name } });
-    markDividendsStale(userId);
+    await markDividendsStale(userId);
   }
   return { ok: true };
 }
@@ -242,7 +242,7 @@ export async function deleteTransaction(id: string): Promise<FormState> {
     return { error: "이 매수 기록을 지우면 이후 매도 수량이 보유 수량을 넘어요. 매도 기록을 먼저 삭제해 주세요." };
   }
   await prisma.transaction.delete({ where: { id } });
-  markDividendsStale(userId);
+  await markDividendsStale(userId);
   return { ok: true };
 }
 
@@ -566,7 +566,7 @@ export async function importTrades(_: FormState, form: FormData): Promise<FormSt
       data: newCash.map((c) => ({ ...c, accountId: realId.get(c.accountId) ?? c.accountId, date: new Date(`${c.date}T00:00:00Z`) })),
     });
   });
-  markDividendsStale(userId);
+  await markDividendsStale(userId);
   const parts = [`${incoming.length + newDivs.length + newCash.length}건 추가`];
   if (newDivs.length || newCash.length) parts[0] += ` (매매 ${incoming.length} · 배당 ${newDivs.length} · 현금 ${newCash.length})`;
   if (skipped) parts.push(`중복 ${skipped}건 건너뜀`);
