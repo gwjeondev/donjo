@@ -194,7 +194,6 @@ export function TradeList({
                   <td className="px-3 py-3" title={d.name}>
                     <div className="truncate font-medium">{d.name}</div>
                     <div className="truncate text-xs text-muted">
-                      {d.auto && `자동 · 배당락 ${d.exDate} · `}
                       세전 {fmtPrice(d.amount, cur)}
                       {d.tax ? ` · 세금 ${fmtPrice(d.tax, cur)}` : ""}
                       {d.memo ? ` · ${d.memo}` : ""}
@@ -281,7 +280,6 @@ export function TradeList({
               ["세금", d.tax ? fmtPrice(d.tax, cur) : "-"],
             ];
             if (d.market === "US") rows.push(["환율", `${fmtQty(d.fxRate)}원`]);
-            if (d.auto) rows.push(["자동 기록", `배당락 ${d.exDate}`]);
             if (d.memo) rows.push(["메모", d.memo]);
             return (
               <DetailCard

@@ -17,10 +17,6 @@ export interface Dividend {
   payDate: string;
   createdAt?: string;
   memo?: string | null;
-  /** 배당 이력으로 자동으로 만든 기록 */
-  auto?: boolean;
-  /** 배당락일 (자동 기록) */
-  exDate?: string | null;
 }
 
 /** 세후 배당금 (원화) */

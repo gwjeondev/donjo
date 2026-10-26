@@ -6,14 +6,12 @@ import { saveAccount } from "@/app/actions";
 import { EditIcon, PlusIcon } from "./icons";
 import { DeleteAccountButton } from "./delete-account";
 import { Dialog } from "./trade-form";
-import { ACCOUNT_KIND_LABEL } from "@/lib/autodiv";
 
 interface Account {
   id: string;
   name: string;
   broker: string | null;
   memo: string | null;
-  kind?: string;
 }
 
 function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => void }) {
@@ -27,19 +25,6 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
       <div>
         <label className="label" htmlFor="acc-name">계좌 이름</label>
         <input id="acc-name" name="name" className="input" required defaultValue={initial?.name} placeholder="예: 키움 일반, 미래에셋 ISA" />
-      </div>
-      <div>
-        <label className="label" htmlFor="acc-kind">계좌 종류</label>
-        <select id="acc-kind" name="kind" className="input" defaultValue={initial?.kind ?? "GENERAL"}>
-          {(Object.keys(ACCOUNT_KIND_LABEL) as (keyof typeof ACCOUNT_KIND_LABEL)[]).map((k) => (
-            <option key={k} value={k}>
-              {ACCOUNT_KIND_LABEL[k]}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-muted" data-wrap="ok">
-          자동 배당의 세금 계산에 써요. 일반 계좌는 국내 배당 15.4%, ISA·연금은 받을 때 떼지 않아요. 미국 배당은 어느 계좌든 15%예요.
-        </p>
       </div>
       <div>
         <label className="label" htmlFor="acc-broker">증권사 (선택)</label>
