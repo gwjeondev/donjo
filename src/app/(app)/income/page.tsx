@@ -21,7 +21,6 @@ import { OVERSEAS_DEDUCTION, overseasSales, overseasTax } from "@/lib/tax";
 
 export const metadata = { title: "손익" };
 
-const dot = (d: string) => d.replaceAll("-", ".");
 const inMarket = (m: Market, g?: MarketGroup) => !g || (g === "us" ? m === "US" : m !== "US");
 
 type Tab = "realized" | "dividend" | "tax";
@@ -129,7 +128,6 @@ function IncomeView({
   const events = marketEvents.filter((e) => inRange(e.date));
   const dividends = marketDividends.filter((d) => inRange(d.payDate));
   const firstDate = [...marketEvents.map((e) => e.date), ...marketDividends.map((d) => d.payDate)].sort()[0];
-  const period = range === "전체" ? "전체 기간" : `${dot(from ?? firstDate ?? today)} ~ ${dot(to ?? today)}`;
   const years = incomeByYear(marketEvents, marketDividends);
   const keep = { ...(account ? { account } : {}), ...(market ? { market } : {}), ...(symbol ? { symbol } : {}), ...(tab === "dividend" ? { tab } : {}) };
   // 연도 표의 연도를 누르면 그 해 1/1 ~ 12/31을 직접입력으로 본다
@@ -141,7 +139,7 @@ function IncomeView({
   return (
     <>
       <FilterRow accounts={accounts} account={account} extra={<MarketFilter value={market} />}>
-        <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} shown={period} />
+        <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} />
       </FilterRow>
       {/* 필터를 바꿔 새로 불러오는 동안 이 영역에 어두운 막과 스피너 */}
       <ReloadRegion className="space-y-5">

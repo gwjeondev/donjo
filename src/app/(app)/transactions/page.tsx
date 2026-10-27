@@ -6,7 +6,6 @@ import { TradeSearch } from "@/components/trade-search";
 import { todayStr } from "@/lib/market/service";
 import { DEFAULT_RANGE, parseRange, rangeBounds } from "@/lib/range";
 
-const dot = (d: string) => d.replaceAll("-", ".");
 import { TradeSort, type TradeOrder } from "@/components/trade-sort";
 import { ExportButton, ImportButton } from "@/components/csv-actions";
 import { PageHeader } from "@/components/page-header";
@@ -51,7 +50,6 @@ export default async function TransactionsPage({
   const { range, custom } = parseRange(params.range || !(params.from || params.to) ? params : { ...params, range: "custom" });
   const { from, to } = rangeBounds(range, today, custom);
   const firstDate = [allTrades.at(-1)?.tradeDate, allDividends.at(-1)?.payDate, allCash.at(-1)?.date].filter(Boolean).sort()[0];
-  const period = range === "전체" ? "전체 기간" : `${dot(from ?? firstDate ?? today)} ~ ${dot(to ?? today)}`;
   const filtered = range !== DEFAULT_RANGE;
   const inRange = (d: string) => (!from || d >= from) && (!to || d <= to);
   const inMarket = (m: string) => !market || (market === "us" ? m === "US" : m !== "US");
@@ -111,7 +109,7 @@ export default async function TransactionsPage({
         <AddRecordButton accounts={accounts} stocks={dividendStocks(everyTrade ?? allTrades)} defaultAccountId={account} />
       </PageHeader>
       <div className="-mt-2 mb-4 flex flex-wrap items-center justify-between gap-2">
-        <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback={DEFAULT_RANGE} min={firstDate} max={today} shown={period} />
+        <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback={DEFAULT_RANGE} min={firstDate} max={today} />
         {allTrades.some((t) => t.market === "US") && market !== "kr" && <CurrencyToggle />}
       </div>
       {symbol && (

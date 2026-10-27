@@ -19,7 +19,6 @@ export function RangeBar({
   custom,
   min,
   max,
-  shown,
   onChange,
 }: {
   range: RangeId;
@@ -27,8 +26,6 @@ export function RangeBar({
   /** 직접입력 날짜의 범위 */
   min?: string;
   max?: string;
-  /** 직접입력이 아닐 때 옆에 보여 줄 실제 기간 */
-  shown?: string | null;
   onChange: (range: RangeId, custom: Custom) => void;
 }) {
   const pick = (r: RangeId) => {
@@ -49,7 +46,7 @@ export function RangeBar({
     />
   );
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto">
       <div className="flex w-full rounded-lg bg-surface-2 p-0.5 text-xs sm:w-fit" role="group" aria-label="조회 기간">
         {RANGE_IDS.map((r) => (
           <button
@@ -69,9 +66,7 @@ export function RangeBar({
           <span className="text-muted">~</span>
           {dateInput("to", "종료일")}
         </div>
-      ) : (
-        shown && <span className="text-xs text-muted">{shown}</span>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -83,7 +78,6 @@ export function RangeFilter({
   fallback,
   min,
   max,
-  shown,
 }: {
   range: RangeId;
   custom: Custom;
@@ -91,7 +85,6 @@ export function RangeFilter({
   fallback: RangeId;
   min?: string;
   max?: string;
-  shown?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -105,7 +98,6 @@ export function RangeFilter({
       custom={custom}
       min={min}
       max={max}
-      shown={shown}
       onChange={(r, c) => {
         setRange(r);
         setCustom(c);

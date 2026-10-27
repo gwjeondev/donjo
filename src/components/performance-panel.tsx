@@ -73,12 +73,10 @@ export function PerformancePanel({
     return { from, to, daily: d.points, startValue: d.before?.value ?? 0, benchmark: b.points, base: b.before };
   }, [daily, benchmark, range, custom, last, first, initialRange, initialCustom]);
 
-  const shown = view.daily.length ? `${dot(view.daily[0].date)} ~ ${dot(view.daily.at(-1)!.date)}` : null;
-
   return (
     <div className="space-y-4" aria-busy={pending}>
       <FilterRow accounts={accounts} account={account} extra={<MarketFilter value={market} />}>
-        {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />}
+        {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} onChange={go} />}
       </FilterRow>
 
       {daily.length >= 2 && view.daily.length === 0 ? (
