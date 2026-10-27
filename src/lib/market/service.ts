@@ -71,7 +71,7 @@ const REFRESH_CONCURRENCY = 3;
  * 일봉 캐시를 갱신한다. 캐시 상태는 종목 수와 상관없이 쿼리 2번으로 확인하고,
  * 오래된 종목만 외부에서 받아(마지막 저장일 1주 전부터, 수정 종가 반영) 저장한다.
  */
-async function refreshBars(symbols: string[], from: string) {
+async function refreshBars(symbols: string[], from: string, doneAt?: Map<string, string>) {
   const [caches, ranges] = await Promise.all([
     prisma.symbolCache.findMany({ where: { symbol: { in: symbols } }, select: { symbol: true, barsFetchedAt: true } }),
     prisma.priceBar.groupBy({ by: ["symbol"], where: { symbol: { in: symbols } }, _min: { date: true }, _max: { date: true } }),
@@ -83,6 +83,9 @@ async function refreshBars(symbols: string[], from: string) {
     const r = range.get(symbol);
     const hasEarliest = !!r?._min.date && fromDate(r._min.date) <= from;
     const at = fetchedAt.get(symbol);
+    // 다 판 종목: 마지막 보유일까지 일봉이 있으면 지난 가격은 바뀌지 않으니 다시 받지 않는다
+    const done = doneAt?.get(symbol);
+    if (done && hasEarliest && r?._max.date && fromDate(r._max.date) >= done) return [];
     // 최근에 받았으면 건너뛴다 (받아 둔 일봉이 아예 없는데 최근에 시도했다면 받을 수 없는 종목이다)
     if (at && Date.now() - at.getTime() < BARS_TTL_MS && (hasEarliest || !r)) return [];
     return [{ symbol, start: hasEarliest && r?._max.date ? addDays(fromDate(r._max.date), -7) : from }];
@@ -117,10 +120,13 @@ async function refreshBars(symbols: string[], from: string) {
   }
 }
 
-export async function getPriceSeries(symbols: string[], from: string): Promise<PriceSeries> {
+/**
+ * 일봉 시세. doneAt: 더 이상 보유하지 않는 종목의 마지막 보유일 (그날까지 일봉이 저장돼 있으면 다시 받지 않는다)
+ */
+export async function getPriceSeries(symbols: string[], from: string, doneAt?: Map<string, string>): Promise<PriceSeries> {
   const unique = [...new Set([...symbols, FX_SYMBOL])];
   // 갱신이 실패해도 이미 저장된 일봉으로 계산한다
-  await refreshBars(unique, from).catch((e) => console.error("[market] 일봉 갱신 실패:", (e as Error).message));
+  await refreshBars(unique, from, doneAt).catch((e) => console.error("[market] 일봉 갱신 실패:", (e as Error).message));
   const bars = await prisma.priceBar.findMany({
     where: { symbol: { in: unique }, date: { gte: toDate(addDays(from, -10)) } },
     orderBy: { date: "asc" },

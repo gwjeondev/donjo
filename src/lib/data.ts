@@ -181,10 +181,14 @@ async function computePerformance(userId: string, accountId?: string, rangeFrom?
         ...trades.filter((t) => t.tradeDate >= valuesFrom).map((t) => t.symbol),
       ]
     : trades.map((t) => t.symbol);
-  const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from);
+  // 지금은 보유하지 않는 종목: 마지막 거래일까지만 시세가 필요하다 (오늘 시세도 필요 없다)
+  const heldNow = new Set(computePositions(trades).filter((p) => p.quantity > 0).map((p) => p.symbol));
+  const doneAt = new Map<string, string>();
+  for (const t of trades) if (!heldNow.has(t.symbol) && t.tradeDate > (doneAt.get(t.symbol) ?? "")) doneAt.set(t.symbol, t.tradeDate);
+  const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from, doneAt);
   const today = todayStr();
-  // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다
-  const quotes = await getQuotes([...new Set(symbols), "KRW=X"]);
+  // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다 (보유 중인 종목만)
+  const quotes = await getQuotes([...new Set(symbols.filter((s) => heldNow.has(s))), "KRW=X"]);
   for (const [s, q] of quotes) {
     if (!prices.has(s)) prices.set(s, new Map());
     prices.get(s)!.set(today, q.price);
