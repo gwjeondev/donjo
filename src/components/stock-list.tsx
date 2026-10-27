@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { fmtKrw, fmtPct, fmtQty, fmtSigned, MARKET_LABEL, tone } from "@/lib/format";
+import { fmtKrw, fmtPct, fmtQty, fmtSigned, tone } from "@/lib/format";
 import type { ValuedPosition } from "@/lib/portfolio";
 import { HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { ChevronRightIcon } from "./icons";
@@ -55,10 +55,7 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
                   <h2 className="min-w-0 truncate font-semibold" title={p.name}>
                     {p.name}
                   </h2>
-                  <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted">
-                    {MARKET_LABEL[p.market]} · {p.symbol.replace(/\.(KS|KQ)$/, "")}
-                    <ChevronRightIcon className="size-4" />
-                  </span>
+                  <ChevronRightIcon className="size-4 shrink-0 text-muted" />
                 </div>
                 {isSold ? (
                   <p className="mt-3 text-2xl font-bold text-muted">보유 없음</p>
