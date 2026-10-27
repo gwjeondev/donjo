@@ -86,18 +86,19 @@ export function PerformancePanel({
           선택한 기간에는 기록이 없어요. {first && last && `${dot(first)} ~ ${dot(last)} 사이로 골라 주세요.`}
         </p>
       ) : (
-        <div className="relative">
-          {/* 기간을 바꿔 새로 계산하는 동안: 흐려진 내용 위에 (흐려지지 않는) 스피너 */}
-          {pending && (
-            // 내용 전체를 덮는 막 안에서 스피너가 보이는 화면의 세로 중앙에 붙어 있다 (스크롤해도 따라온다)
-            <div className="pointer-events-none absolute inset-0 z-10">
-              <div className="sticky top-1/2 flex -translate-y-1/2 justify-center">
+        <div className="space-y-4">
+          {/* 기간을 바꿔 새로 계산하는 동안: 흐려진 내용 위에, 시장 대비 수익률 박스의 가운데에 (흐려지지 않는) 스피너 */}
+          <div className="relative">
+            {pending && (
+              <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
                 <Spinner className="size-8 border-[3px]" />
               </div>
+            )}
+            <div className={`transition-opacity ${pending ? "opacity-50" : ""}`}>
+              <BenchmarkChart points={daily.length >= 2 ? view.benchmark : benchmark} base={view.base} missing={missing} failed={failed} />
             </div>
-          )}
-          <div className={`space-y-4 transition-opacity ${pending ? "opacity-50" : ""}`}>
-            <BenchmarkChart points={daily.length >= 2 ? view.benchmark : benchmark} base={view.base} missing={missing} failed={failed} />
+          </div>
+          <div className={`transition-opacity ${pending ? "opacity-50" : ""}`}>
             <PerformanceView points={view.daily} startValue={view.startValue} failed={failed} account={account} market={market} />
           </div>
         </div>
