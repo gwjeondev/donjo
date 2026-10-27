@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RANGE_IDS, rangeBounds, rangeQuery, type RangeId } from "@/lib/range";
+import { Spinner } from "./spinner";
 
 const RANGE_LABEL: Record<RangeId, string> = { "1M": "1M", "3M": "3M", YTD: "YTD", "1Y": "1Y", 전체: "전체", 직접: "직접입력" };
 const today = () => {
@@ -19,10 +20,13 @@ export function RangeBar({
   min,
   max,
   shown,
+  loading = false,
   onChange,
 }: {
   range: RangeId;
   custom: Custom;
+  /** 기간을 바꾸고 새 데이터를 불러오는 중이면 버튼 옆에 스피너 */
+  loading?: boolean;
   /** 직접입력 날짜의 범위 */
   min?: string;
   max?: string;
@@ -62,6 +66,8 @@ export function RangeBar({
           </button>
         ))}
       </div>
+      {/* 스피너가 나타나도 옆 글자가 밀리지 않게 자리를 항상 잡아 둔다 */}
+      <span className="inline-grid size-4 place-items-center">{loading && <Spinner className="size-4" />}</span>
       {range === "직접" ? (
         <div className="flex w-full items-center gap-1.5 sm:w-auto sm:gap-2">
           {dateInput("from", "시작일")}
@@ -95,11 +101,12 @@ export function RangeFilter({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const [range, setRange] = useState(initialRange);
   const [custom, setCustom] = useState(initialCustom);
   return (
     <RangeBar
+      loading={pending}
       range={range}
       custom={custom}
       min={min}

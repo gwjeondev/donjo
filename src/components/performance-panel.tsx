@@ -9,6 +9,7 @@ import { rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 import { RangeBar } from "./range-bar";
 import { FilterRow } from "./filter-row";
 import { MarketFilter, type MarketGroup } from "./market-filter";
+import { Spinner } from "./spinner";
 
 const dot = (d: string) => d.replaceAll("-", ".");
 
@@ -80,26 +81,22 @@ export function PerformancePanel({
         {daily.length >= 2 && <RangeBar range={range} custom={custom} min={first} max={last} shown={shown} onChange={go} />}
       </FilterRow>
 
-
       {daily.length >= 2 && view.daily.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">
           선택한 기간에는 기록이 없어요. {first && last && `${dot(first)} ~ ${dot(last)} 사이로 골라 주세요.`}
         </p>
       ) : (
-        <div className={`space-y-4 transition-opacity ${pending ? "opacity-50" : ""}`}>
-          <BenchmarkChart
-            points={daily.length >= 2 ? view.benchmark : benchmark}
-            base={view.base}
-            missing={missing}
-            failed={failed}
-          />
-          <PerformanceView
-            points={view.daily}
-            startValue={view.startValue}
-            failed={failed}
-            account={account}
-            market={market}
-          />
+        <div className="relative">
+          {/* 기간을 바꿔 새로 계산하는 동안: 흐려진 내용 위에 (흐려지지 않는) 스피너 */}
+          {pending && (
+            <div className="pointer-events-none absolute inset-x-0 top-24 z-10 flex justify-center">
+              <Spinner className="size-8 border-[3px]" />
+            </div>
+          )}
+          <div className={`space-y-4 transition-opacity ${pending ? "opacity-50" : ""}`}>
+            <BenchmarkChart points={daily.length >= 2 ? view.benchmark : benchmark} base={view.base} missing={missing} failed={failed} />
+            <PerformanceView points={view.daily} startValue={view.startValue} failed={failed} account={account} market={market} />
+          </div>
         </div>
       )}
     </div>

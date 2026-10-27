@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtKrw, fmtKrwShort, fmtSigned, tone } from "@/lib/format";
 import { rangeBounds, sliceRange, type RangeId } from "@/lib/range";
+import { Spinner } from "./spinner";
 
 export interface AssetPoint {
   date: string;
@@ -17,7 +18,22 @@ const RANGES = ["1M", "3M", "YTD", "1Y", "전체"] as const satisfies readonly R
 /**
  * 자산 추이: 입출금까지 반영한 총자산(주식 + 현금)과 기간 중 증감. 투자 수익률은 수익률 화면에서 본다.
  */
-export function AssetChart({ points, failed = false, withCash = false, bare = false }: { points: AssetPoint[]; failed?: boolean; withCash?: boolean; bare?: boolean }) {
+export function AssetChart({
+  points,
+  failed = false,
+  withCash = false,
+  bare = false,
+  status = "ready",
+  onRetry,
+}: {
+  points: AssetPoint[];
+  failed?: boolean;
+  withCash?: boolean;
+  bare?: boolean;
+  /** loading·error여도 같은 틀(머리글·기간 버튼·그래프 높이)을 그려서, 불러오는 동안과 불러온 뒤의 높이가 같다 */
+  status?: "ready" | "loading" | "error";
+  onRetry?: () => void;
+}) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("3M");
   const { data, base } = useMemo(() => {
     if (!points.length) return { data: points, base: undefined };
@@ -35,34 +51,57 @@ export function AssetChart({ points, failed = false, withCash = false, bare = fa
     <div className={bare ? "flex flex-col" : "card flex flex-col p-5"}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold">
-            {!bare && "자산 추이"}
-            {withCash && <span className={`${bare ? "" : "ml-1.5 "}text-xs font-normal text-muted`}>주식 + 현금</span>}
-          </h2>
-          {last && (
+          {bare ? (
+            // 팝업 제목이 이미 '자산 추이'라서 부가 설명만 (없어도 줄 높이는 그대로 두어 높이가 변하지 않게)
+            <h2 className="text-xs text-muted">{withCash ? "주식 + 현금" : "\u00a0"}</h2>
+          ) : (
+            <h2 className="font-semibold">자산 추이{withCash && <span className="ml-1.5 text-xs font-normal text-muted">주식 + 현금</span>}</h2>
+          )}
+          {(last || status !== "ready") && (
             <p className="mt-0.5 text-xs text-ink-2">
-              기간 변화 <span className={`font-semibold ${tone(change)}`}>{fmtSigned(change)}</span>
+              기간 변화{" "}
+              {last && status === "ready" ? (
+                <span className={`font-semibold ${tone(change)}`}>{fmtSigned(change)}</span>
+              ) : (
+                <span className="text-muted">-</span>
+              )}
             </p>
           )}
         </div>
-        <div className="flex rounded-lg bg-surface-2 p-0.5 text-xs">
+        {/* 휴대폰에서는 항상 아래 줄 (금액 길이에 따라 줄이 바뀌면 불러오는 중과 불러온 뒤의 높이가 달라진다) */}
+        <div className="flex w-full rounded-lg bg-surface-2 p-0.5 text-xs sm:w-auto">
           {RANGES.map((r) => (
             <button
               key={r}
+              disabled={status !== "ready"}
               onClick={() => setRange(r)}
-              className={`rounded-md px-2.5 py-1 font-medium ${r === range ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
+              className={`flex-1 rounded-md px-2.5 py-1 font-medium disabled:cursor-default sm:flex-none ${r === range ? "bg-surface text-ink shadow-sm" : "text-ink-2"}`}
             >
               {r}
             </button>
           ))}
         </div>
       </div>
-      {data.length < 2 ? (
-        <p className="flex flex-1 items-center justify-center py-16 text-sm text-muted">
-          {failed ? "자산 추이를 불러오지 못했어요. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없어요"}
-        </p>
-      ) : (
-        <div className="h-60 sm:h-72">
+      {/* 상태와 상관없이 같은 높이의 틀 (불러오는 중 → 불러온 뒤에 박스 크기가 변하지 않게) */}
+      <div className="h-60 sm:h-72">
+        {status === "loading" ? (
+          <div className="flex h-full items-center justify-center">
+            <Spinner className="size-7" />
+          </div>
+        ) : status === "error" ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted">
+            <p>자산 추이를 불러오지 못했어요.</p>
+            {onRetry && (
+              <button type="button" className="btn-ghost" onClick={onRetry}>
+                다시 시도
+              </button>
+            )}
+          </div>
+        ) : data.length < 2 ? (
+          <p className="flex h-full items-center justify-center text-sm text-muted">
+            {failed ? "자산 추이를 불러오지 못했어요. 잠시 후 새로고침해 주세요." : "표시할 자산 기록이 아직 없어요"}
+          </p>
+        ) : (
           <ResponsiveContainer>
             <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <defs>
@@ -115,8 +154,8 @@ export function AssetChart({ points, failed = false, withCash = false, bare = fa
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
