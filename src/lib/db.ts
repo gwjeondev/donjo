@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 // 우선순위대로 살펴볼 접속 주소 환경변수
-const URL_ENVS = ["ACCELERATE_URL", "PRISMA_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL"] as const;
+export const URL_ENVS = ["ACCELERATE_URL", "PRISMA_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL"] as const;
 
 /** Prisma Accelerate (HTTP 커넥션 풀링): prisma:// 또는 prisma+postgres:// */
 const isAccelerate = (url: string) => /^prisma(\+postgres)?:\/\//.test(url);
