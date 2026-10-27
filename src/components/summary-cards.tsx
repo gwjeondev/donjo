@@ -1,18 +1,22 @@
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
 import { cashKrw, type CashBalance } from "@/lib/cash";
 import type { Summary } from "@/lib/portfolio";
+import { AssetTrendButton } from "./asset-trend-button";
 
 export function SummaryCards({
   summary,
   dividendKrw = 0,
   cash,
   usdKrw = 0,
+  trend = false,
 }: {
   summary: Summary;
   dividendKrw?: number;
   /** 현금 잔고. 있으면 첫 카드가 총자산(주식 + 현금)이 된다 */
   cash?: CashBalance;
   usdKrw?: number;
+  /** 총자산 카드에 '자산 추이' 버튼 (팝업으로 자산 추이 그래프) */
+  trend?: boolean;
 }) {
   // 현금 잔고를 넘겨받는 화면(대시보드·계좌 상세)은 현금이 0이어도 총자산 = 주식 + 현금으로 나눠 보여 준다
   const showCash = !!cash;
@@ -24,7 +28,10 @@ export function SummaryCards({
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="card p-5">
-        <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-ink-2">{showCash ? "총자산" : "총 평가금액"}</p>
+          {trend && <AssetTrendButton />}
+        </div>
         <p className="mt-1 text-3xl font-bold tracking-tight">{fmtKrw(summary.valueKrw + cashTotal)}</p>
         {cash && (
           // 주식·현금 내역을 한 줄로: 현금은 원화(₩)와 달러($)를 따로 (총자산에는 달러를 오늘 환율로 원화 환산해 더한다)

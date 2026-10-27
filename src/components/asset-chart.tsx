@@ -5,7 +5,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { fmtKrw, fmtKrwShort, fmtSigned, tone } from "@/lib/format";
 import { rangeBounds, sliceRange, type RangeId } from "@/lib/range";
 
-interface Point {
+export interface AssetPoint {
   date: string;
   value: number;
   /** 누적 시간가중수익률 */
@@ -17,7 +17,7 @@ const RANGES = ["1M", "3M", "YTD", "1Y", "전체"] as const satisfies readonly R
 /**
  * 자산 추이: 입출금까지 반영한 총자산(주식 + 현금)과 기간 중 증감. 투자 수익률은 수익률 화면에서 본다.
  */
-export function AssetChart({ points, failed = false, withCash = false }: { points: Point[]; failed?: boolean; withCash?: boolean }) {
+export function AssetChart({ points, failed = false, withCash = false, bare = false }: { points: AssetPoint[]; failed?: boolean; withCash?: boolean; bare?: boolean }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("3M");
   const { data, base } = useMemo(() => {
     if (!points.length) return { data: points, base: undefined };
@@ -31,11 +31,13 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
   const change = base && last ? last.value - base.value : 0;
 
   return (
-    <div className="card flex flex-col p-5">
+    // bare: 팝업 안에서 쓸 때는 카드 테두리 없이
+    <div className={bare ? "flex flex-col" : "card flex flex-col p-5"}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="font-semibold">
-            자산 추이{withCash && <span className="ml-1.5 text-xs font-normal text-muted">주식 + 현금</span>}
+            {!bare && "자산 추이"}
+            {withCash && <span className={`${bare ? "" : "ml-1.5 "}text-xs font-normal text-muted`}>주식 + 현금</span>}
           </h2>
           {last && (
             <p className="mt-0.5 text-xs text-ink-2">
@@ -89,7 +91,7 @@ export function AssetChart({ points, failed = false, withCash = false }: { point
               <Tooltip
                 cursor={{ stroke: "var(--muted)", strokeDasharray: "3 3" }}
                 content={({ active, payload }) => {
-                  const p = active && (payload?.[0]?.payload as Point | undefined);
+                  const p = active && (payload?.[0]?.payload as AssetPoint | undefined);
                   if (!p) return null;
                   return (
                     <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-sm">

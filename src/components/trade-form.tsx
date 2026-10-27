@@ -513,11 +513,14 @@ export function Dialog({
   open,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  /** 그래프처럼 넓게 보여 줄 때 */
+  wide?: boolean;
 }) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
@@ -552,7 +555,7 @@ export function Dialog({
         aria-modal
         aria-label={title}
         data-closing={closing || undefined}
-        className="dialog-panel max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:max-w-md sm:rounded-2xl"
+        className={`dialog-panel max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:rounded-2xl ${wide ? "sm:max-w-3xl" : "sm:max-w-md"}`}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
