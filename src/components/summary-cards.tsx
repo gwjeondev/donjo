@@ -19,6 +19,8 @@ export function SummaryCards({
   const cashTotal = cash ? cashKrw(cash, usdKrw) : 0;
   // 총손익 = 평가손익 + 실현손익 + 받은 배당금
   const total = summary.totalPnlKrw + dividendKrw;
+  // 오늘 등락률: 어제 종가 기준 주식 평가금액 대비 (현금은 하루 등락이 없어 빼고 본다)
+  const dayBase = summary.valueKrw - summary.dayChangeKrw;
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="card p-5">
@@ -41,6 +43,7 @@ export function SummaryCards({
         )}
         <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
           오늘 {fmtSigned(summary.dayChangeKrw)}
+          {dayBase > 0 && ` (${fmtPct(summary.dayChangeKrw / dayBase)})`}
         </p>
       </div>
       <div className="card p-5">
