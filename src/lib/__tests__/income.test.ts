@@ -28,7 +28,7 @@ describe("realizedEvents", () => {
 
   it("평균단가와 원화 손익(매수·매도 시점 환율)", () => {
     const [first, apple] = realizedEvents(trades);
-    expect(first.avgCost).toBeCloseTo(1505); // (10000+100+20000)/20
+    expect(first.avgCost).toBeCloseTo(1500); // 수수료 제외 (10000+20000)/20
     expect(first.pnlKrw).toBeCloseTo(15000 - 30 - 7525);
     expect(apple.pnl).toBeCloseTo(20);
     expect(apple.pnlKrw).toBeCloseTo(220 * 1400 - 200 * 1300);

@@ -214,3 +214,14 @@ describe("같은 날 사고 판 경우의 일별 수익률", () => {
     expect(pts.at(-1)!.ret).toBeCloseTo(0.1);
   });
 });
+
+describe("평단가 표시", () => {
+  it("평단가는 수수료를 빼고, 매입금액·손익은 수수료를 포함한다", () => {
+    const mk = (id: string, quantity: number, price: number, fee: number): Trade => ({
+      id, accountId: "a", symbol: "X", name: "X", market: "KOSPI", type: "BUY", quantity, price, fee, tax: 0, fxRate: 1, tradeDate: "2026-01-0" + id,
+    });
+    const [p] = computePositions([mk("1", 28, 52930, 140), mk("2", 35, 58200, 200)]);
+    expect(p.avgCost).toBeCloseTo(55857.78, 2);
+    expect(p.costBasis).toBe(28 * 52930 + 140 + 35 * 58200 + 200);
+  });
+});

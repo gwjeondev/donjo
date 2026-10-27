@@ -34,8 +34,10 @@ export interface RealizedEvent {
   quantity: number;
   /** 매도 단가 (현지 통화) */
   price: number;
-  /** 평균단가 (현지 통화, 매수 수수료 포함) */
+  /** 평균단가 (현지 통화, 표시용 — 매수 수수료·세금 제외) */
   avgCost: number;
+  /** 평균단가 (원화, 매수일 환율, 수수료·세금 제외) */
+  avgCostKrw: number;
   /** 매도 대금 − 수수료 − 세금 (현지 통화) */
   proceeds: number;
   /** 판 수량의 매입금액 (현지 통화) */
@@ -53,11 +55,11 @@ export interface RealizedEvent {
 
 /** 모든 매도를 시간순으로 따라가며 건별 실현손익을 낸다. 보유 수량을 넘는 매도는 보유분만 계산한다 */
 export function realizedEvents(trades: Trade[]): RealizedEvent[] {
-  const held = new Map<string, { qty: number; cost: number; costKrw: number }>();
+  const held = new Map<string, { qty: number; cost: number; costKrw: number; gross: number; grossKrw: number }>();
   const events: RealizedEvent[] = [];
   for (const t of sortTrades(trades)) {
     const k = `${t.accountId}|${t.symbol}`;
-    const h = held.get(k) ?? { qty: 0, cost: 0, costKrw: 0 };
+    const h = held.get(k) ?? { qty: 0, cost: 0, costKrw: 0, gross: 0, grossKrw: 0 };
     held.set(k, h);
     const currency = currencyOf(t.market);
     const fx = currency === "USD" ? t.fxRate : 1;
@@ -66,6 +68,8 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
       h.qty += t.quantity;
       h.cost += cost;
       h.costKrw += cost * fx;
+      h.gross += t.quantity * t.price;
+      h.grossKrw += t.quantity * t.price * fx;
       continue;
     }
     const qty = Math.min(t.quantity, h.qty);
@@ -73,6 +77,8 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
     const ratio = qty / h.qty;
     const cost = h.cost * ratio;
     const costKrw = h.costKrw * ratio;
+    const gross = h.gross * ratio;
+    const grossKrw = h.grossKrw * ratio;
     const proceeds = qty * t.price - t.fee - t.tax;
     const proceedsKrw = proceeds * fx;
     events.push({
@@ -85,7 +91,8 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
       date: t.tradeDate,
       quantity: qty,
       price: t.price,
-      avgCost: cost / qty,
+      avgCost: gross / qty,
+      avgCostKrw: grossKrw / qty,
       proceeds,
       cost,
       pnl: proceeds - cost,
@@ -98,7 +105,9 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
     h.qty -= qty;
     h.cost -= cost;
     h.costKrw -= costKrw;
-    if (h.qty < 1e-9) Object.assign(h, { qty: 0, cost: 0, costKrw: 0 });
+    h.gross -= gross;
+    h.grossKrw -= grossKrw;
+    if (h.qty < 1e-9) Object.assign(h, { qty: 0, cost: 0, costKrw: 0, gross: 0, grossKrw: 0 });
   }
   return events;
 }

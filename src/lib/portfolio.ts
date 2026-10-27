@@ -30,8 +30,12 @@ export interface Position {
   market: Market;
   currency: "KRW" | "USD";
   quantity: number;
-  /** 현지 통화 기준 평균단가 (수수료 포함) */
+  /** 현지 통화 기준 평균단가 (표시용, 수수료·세금 제외 — 증권사 평단과 같다) */
   avgCost: number;
+  /** 수수료·세금을 뺀 매수 대금 (평균단가 계산용, 현지 통화) */
+  grossCost: number;
+  /** 수수료·세금을 뺀 매수 대금 (원화, 매수 시점 환율) */
+  grossCostKrw: number;
   /** 현지 통화 기준 매입금액 */
   costBasis: number;
   /** 원화 기준 매입금액 (매수 시점 환율) */
@@ -71,6 +75,8 @@ export function computePositions(trades: Trade[]): Position[] {
         currency: currencyOf(t.market),
         quantity: 0,
         avgCost: 0,
+        grossCost: 0,
+        grossCostKrw: 0,
         costBasis: 0,
         costBasisKrw: 0,
         realizedPnlKrw: 0,
@@ -85,6 +91,8 @@ export function computePositions(trades: Trade[]): Position[] {
       p.quantity += t.quantity;
       p.costBasis += cost;
       p.costBasisKrw += cost * fx;
+      p.grossCost += t.quantity * t.price;
+      p.grossCostKrw += t.quantity * t.price * fx;
     } else {
       const qty = Math.min(t.quantity, p.quantity);
       if (qty <= 0) continue;
@@ -97,13 +105,17 @@ export function computePositions(trades: Trade[]): Position[] {
       p.quantity -= qty;
       p.costBasis -= soldCost;
       p.costBasisKrw -= soldCostKrw;
+      p.grossCost -= p.grossCost * ratio;
+      p.grossCostKrw -= p.grossCostKrw * ratio;
       if (p.quantity < 1e-9) {
         p.quantity = 0;
+        p.grossCost = 0;
+        p.grossCostKrw = 0;
         p.costBasis = 0;
         p.costBasisKrw = 0;
       }
     }
-    p.avgCost = p.quantity > 0 ? p.costBasis / p.quantity : 0;
+    p.avgCost = p.quantity > 0 ? p.grossCost / p.quantity : 0;
   }
   return [...map.values()];
 }
@@ -214,6 +226,8 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
     m.quantity += p.quantity;
     m.costBasis += p.costBasis;
     m.costBasisKrw += p.costBasisKrw;
+    m.grossCost += p.grossCost;
+    m.grossCostKrw += p.grossCostKrw;
     m.realizedPnl += p.realizedPnl;
     m.realizedPnlKrw += p.realizedPnlKrw;
     m.valueKrw += p.valueKrw;
@@ -221,7 +235,7 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
     m.dayChangeKrw += p.dayChangeKrw;
   }
   for (const m of map.values()) {
-    m.avgCost = m.quantity > 0 ? m.costBasis / m.quantity : 0;
+    m.avgCost = m.quantity > 0 ? m.grossCost / m.quantity : 0;
     m.returnRate = m.costBasisKrw > 0 ? m.unrealizedPnlKrw / m.costBasisKrw : 0;
   }
   return [...map.values()];
@@ -260,7 +274,7 @@ export function displayFigures(p: ValuedPosition, mode: DisplayCurrency, usdKrw:
   return {
     currency: "KRW",
     price: p.price != null ? p.price * fx : null,
-    avgCost: p.quantity > 0 ? p.costBasisKrw / p.quantity : 0,
+    avgCost: p.quantity > 0 ? p.grossCostKrw / p.quantity : 0,
     value: p.valueKrw,
     pnl: p.unrealizedPnlKrw,
     returnRate: p.returnRate,

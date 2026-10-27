@@ -10,7 +10,7 @@ import { HEAD, StockCell, TABLE, th } from "./income-lists";
 function view(e: RealizedEvent, currency: "KRW" | "USD") {
   if (e.currency === "USD" && currency === "USD")
     return { cur: "USD" as const, price: e.price, avgCost: e.avgCost, pnl: e.pnl, rate: e.cost > 0 ? e.pnl / e.cost : 0 };
-  return { cur: "KRW" as const, price: e.price * e.fxRate, avgCost: e.costKrw / e.quantity, pnl: e.pnlKrw, rate: e.returnRate };
+  return { cur: "KRW" as const, price: e.price * e.fxRate, avgCost: e.avgCostKrw, pnl: e.pnlKrw, rate: e.returnRate };
 }
 
 /** 실현손익: 매도 한 건마다. 해외 종목은 원화/달러 전환을 따른다 */
