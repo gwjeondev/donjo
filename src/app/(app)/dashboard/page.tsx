@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { AllocationChart } from "@/components/allocation-chart";
 import { AssetChart } from "@/components/asset-chart";
 import { FxNote } from "@/components/fx-note";
@@ -15,8 +16,8 @@ export const metadata = { title: "대시보드" };
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
-  // 영문 이름으로 저장된 국내 종목은 증권사 표기 한글 이름으로 바꾼다 (실패해도 화면은 그대로 보여 준다)
-  await localizeStockNames(userId).catch((e) => console.error("[names] 한글 이름 변환 실패:", e));
+  // 영문 이름으로 저장된 국내 종목은 증권사 표기 한글 이름으로 바꾼다. 화면을 그린 뒤에 하므로 기다리지 않는다
+  after(() => localizeStockNames(userId).catch((e) => console.error("[names] 한글 이름 변환 실패:", e)));
   const [{ accounts, trades, positions, summary, dividendKrw, cash, cashByAccount, fx, quotedAt }, perf] = await Promise.all([
     loadPortfolio(userId),
     loadPerformance(userId),

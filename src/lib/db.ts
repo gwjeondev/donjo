@@ -64,6 +64,8 @@ function createClient() {
     query: {
       async $allOperations({ model, operation, args, query }) {
         const t = Date.now();
+        // DB_TRACE=1: 조회 하나하나를 로그에 남긴다 (한 화면이 DB를 몇 번 부르는지 세기 위해)
+        if (process.env.DB_TRACE) console.info(`[dbtrace] ${model ?? ""}.${operation}`);
         try {
           return await query(args);
         } finally {

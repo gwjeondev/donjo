@@ -74,9 +74,14 @@ export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Pro
   return new Map(results.filter((q): q is Quote => q !== null).map((q) => [q.symbol, q]));
 }
 
-export async function getUsdKrw(): Promise<{ rate: number; live: boolean }> {
-  const q = (await getQuotes([FX_SYMBOL])).get(FX_SYMBOL);
+/** 시세 묶음에서 원달러 환율을 꺼낸다 (시세와 환율을 한 번에 조회하려고) */
+export function usdKrwFrom(quotes: Map<string, Quote>): { rate: number; live: boolean } {
+  const q = quotes.get(FX_SYMBOL);
   return q ? { rate: q.price, live: true } : { rate: DEFAULT_USD_KRW, live: false };
+}
+
+export async function getUsdKrw(): Promise<{ rate: number; live: boolean }> {
+  return usdKrwFrom(await getQuotes([FX_SYMBOL]));
 }
 
 /** 한 번에 몇 종목씩 외부 시세를 받아 저장할지 (DB·외부 API에 동시에 몰리지 않게) */

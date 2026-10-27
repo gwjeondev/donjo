@@ -1,11 +1,12 @@
 // 페이지에서 쓰는 데이터 로딩 (DB 기록 + 시세 결합)
 import "server-only";
+import { cache } from "react";
 import type { CashFlow as CashRow, Dividend as DividendRow, Transaction } from "@prisma/client";
 import { cashBalances, cashTimeline, totalCash, type CashFlow } from "./cash";
 import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
-import { getPriceSeries, getQuotes, getUsdKrw, todayStr } from "./market/service";
+import { getPriceSeries, getQuotes, todayStr, usdKrwFrom } from "./market/service";
 import { addDays, benchmarkSeries, buildDailySeries, FX_SYMBOL, type DailyPoint } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
@@ -13,7 +14,7 @@ const BENCHMARKS = { kospi: "^KS11", sp500: "^GSPC", nasdaq100: "^NDX" } as cons
 import { computePositions, summarize, valuePosition, type Trade } from "./portfolio";
 
 /** 사용자 화면 설정 (없거나 형식이 틀리면 기본값) */
-export async function loadPrefs(userId: string) {
+export const loadPrefs = cache(async (userId: string) => {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { prefs: true } });
   const prefs = readPrefs(u?.prefs);
   // 연동 시작 시각이 없던 때 켠 경우: 지금을 시작으로 정해 둔다 (이미 있는 기록은 현금에 반영하지 않는다)
@@ -22,7 +23,7 @@ export async function loadPrefs(userId: string) {
     await prisma.user.update({ where: { id: userId }, data: { prefs: JSON.parse(JSON.stringify(prefs)) } });
   }
   return prefs;
-}
+});
 
 export function toTrade(t: Transaction): Trade {
   return {
@@ -74,22 +75,22 @@ export function toCashFlow(c: CashRow): CashFlow {
 }
 
 /** 현금 입출금·환전 기록 (최근이 위) */
-export async function loadCashFlows(userId: string, accountId?: string) {
+export const loadCashFlows = cache(async (userId: string, accountId?: string) => {
   const rows = await prisma.cashFlow.findMany({
     where: { account: { userId }, ...(accountId ? { accountId } : {}) },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
   return rows.map(toCashFlow);
-}
+});
 
 /** 배당금 기록 (최근 지급일이 위) */
-export async function loadDividends(userId: string, accountId?: string) {
+export const loadDividends = cache(async (userId: string, accountId?: string) => {
   const rows = await prisma.dividend.findMany({
     where: { account: { userId }, ...(accountId ? { accountId } : {}) },
     orderBy: [{ payDate: "desc" }, { createdAt: "desc" }],
   });
   return rows.map(toDividend);
-}
+});
 
 /** 배당 입력용 종목 목록: 계좌별로 거래한 적 있는 종목 (기록이 최신순이라 처음 만나는 이름이 현재 이름) */
 export function dividendStocks(trades: Trade[]) {
@@ -108,13 +109,13 @@ function dividendsByDate(dividends: Dividend[]) {
   return m;
 }
 
-export async function loadTrades(userId: string, accountId?: string) {
+export const loadTrades = cache(async (userId: string, accountId?: string) => {
   const rows = await prisma.transaction.findMany({
     where: { account: { userId }, ...(accountId ? { accountId } : {}) },
     orderBy: [{ tradeDate: "desc" }, { createdAt: "desc" }],
   });
   return rows.map(toTrade);
-}
+});
 
 export async function loadPortfolio(userId: string, accountId?: string) {
   const [accounts, trades, dividends, flows, prefs] = await Promise.all([
@@ -126,7 +127,9 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   ]);
   const positions = computePositions(trades);
   const held = positions.filter((p) => p.quantity > 0);
-  const [quotes, fx] = await Promise.all([getQuotes(held.map((p) => p.symbol)), getUsdKrw()]);
+  // 환율도 같은 조회에 넣는다 (DB 왕복 한 번 절약)
+  const quotes = await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL]);
+  const fx = usdKrwFrom(quotes);
   const valued = positions.map((p) => valuePosition(p, quotes.get(p.symbol), fx.rate));
   // 화면에 보이는 시세 중 가장 오래된 것의 시각 ("n분 전 시세" 표시용)
   const times = [...quotes.values()].flatMap((q) => (q.fetchedAt ? [q.fetchedAt.getTime()] : []));
