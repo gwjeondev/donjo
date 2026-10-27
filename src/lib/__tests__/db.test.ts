@@ -8,10 +8,11 @@ const accelerate = "prisma+postgres://accelerate.prisma-data.net/?api_key=k";
 describe("resolveDatasource", () => {
   it("ACCELERATE_URL의 풀러 주소(pooled.*)를 pgbouncer 모드로 쓴다", () => {
     const r = resolveDatasource({ VERCEL: "1", DATABASE_URL: direct, PRISMA_DATABASE_URL: direct, ACCELERATE_URL: pooled });
-    expect(r.mode).toBe("pooled (pgbouncer=true)");
+    expect(r.mode).toBe("pooled (pgbouncer=true, connection_limit=15)");
     const u = new URL(r.url!);
     expect(u.hostname).toBe("pooled.db.prisma.io");
     expect(u.searchParams.get("pgbouncer")).toBe("true");
+    expect(u.searchParams.get("connection_limit")).toBe("15");
     expect(u.searchParams.get("sslmode")).toBe("require");
   });
 
@@ -21,7 +22,7 @@ describe("resolveDatasource", () => {
   });
 
   it("다른 변수에 있는 풀러 주소도 찾는다", () => {
-    expect(resolveDatasource({ VERCEL: "1", DATABASE_URL: direct, POSTGRES_URL: pooled }).mode).toBe("pooled (pgbouncer=true)");
+    expect(resolveDatasource({ VERCEL: "1", DATABASE_URL: direct, POSTGRES_URL: pooled }).mode).toBe("pooled (pgbouncer=true, connection_limit=15)");
   });
 
   it("직접 연결뿐이면 Vercel에서는 인스턴스당 커넥션 1개로 제한한다", () => {

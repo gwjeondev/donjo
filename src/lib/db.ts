@@ -36,7 +36,12 @@ export function resolveDatasource(env: Record<string, string | undefined> = proc
 
   const pooled = urls.find(isPooledHost);
   // 트랜잭션 모드 풀러는 prepared statement를 공유하지 못하므로 Prisma의 pgbouncer 모드를 켠다
-  if (pooled) return { url: withParams(pooled, { pgbouncer: "true" }), mode: "pooled (pgbouncer=true)" };
+  // 풀러 앞에서는 인스턴스당 연결을 넉넉히 둬도 된다 (기본 5개면 한 화면의 동시 쿼리가 줄 서서 느려지고 대기 시간 초과가 난다)
+  if (pooled)
+    return {
+      url: withParams(pooled, { pgbouncer: "true", connection_limit: "15", pool_timeout: "20" }),
+      mode: "pooled (pgbouncer=true, connection_limit=15)",
+    };
 
   const direct = env.DATABASE_URL || urls[0];
   if (!direct || !env.VERCEL) return { url: direct, mode: "direct" };
@@ -51,8 +56,24 @@ function createClient() {
   const { url, mode } = resolveDatasource();
   // 어떤 방식으로 접속하는지 서버 로그에 남긴다 (주소·비밀번호는 남기지 않음)
   console.info(`[db] ${mode}`);
-  return new PrismaClient({ datasourceUrl: url });
+  const client = new PrismaClient({ datasourceUrl: url });
+  // 느린 쿼리만 로그에 남긴다 (연결 대기 시간 포함). 어디서 느린지 찾기 위해
+  return client.$extends({
+    query: {
+      async $allOperations({ model, operation, args, query }) {
+        const t = Date.now();
+        try {
+          return await query(args);
+        } finally {
+          const ms = Date.now() - t;
+          if (ms >= SLOW_QUERY_MS) console.warn(`[db] 느린 쿼리 ${ms}ms ${model ?? ""}.${operation}`);
+        }
+      },
+    },
+  }) as unknown as PrismaClient;
 }
+
+const SLOW_QUERY_MS = 300;
 
 export const prisma = globalForPrisma.prisma ?? createClient();
 
