@@ -1,11 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useReload } from "./reload-region";
 
 export function AccountFilter({ accounts, value }: { accounts: { id: string; name: string }[]; value?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { start } = useReload();
   return (
     <select
       className="input w-auto min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:min-w-44"
@@ -15,7 +17,7 @@ export function AccountFilter({ accounts, value }: { accounts: { id: string; nam
         const next = new URLSearchParams(params);
         if (e.target.value) next.set("account", e.target.value);
         else next.delete("account");
-        router.push(`${pathname}?${next}`);
+        start(() => router.push(`${pathname}?${next}`));
       }}
     >
       <option value="">전체 계좌</option>

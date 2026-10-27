@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { BenchmarkChart } from "@/components/benchmark-chart";
 import { PerformanceView } from "@/components/performance-view";
 import type { BenchmarkPoint, DailyPoint } from "@/lib/performance";
@@ -9,7 +9,7 @@ import { rangeBounds, rangeQuery, sliceRange, type RangeId } from "@/lib/range";
 import { RangeBar } from "./range-bar";
 import { FilterRow } from "./filter-row";
 import { MarketFilter, type MarketGroup } from "./market-filter";
-import { Spinner } from "./spinner";
+import { ReloadRegion, useReload } from "./reload-region";
 
 const dot = (d: string) => d.replaceAll("-", ".");
 
@@ -43,7 +43,7 @@ export function PerformancePanel({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [pending, startTransition] = useTransition();
+  const { pending, start } = useReload();
   // 누르자마자 버튼이 바뀌도록 화면 상태를 먼저 바꾸고, 데이터는 뒤따라 받는다
   const [range, setRange] = useState(initialRange);
   const [custom, setCustom] = useState(initialCustom);
@@ -57,7 +57,7 @@ export function PerformancePanel({
     const next = new URLSearchParams(params);
     for (const k of ["range", "from", "to"]) next.delete(k);
     for (const [k, v] of Object.entries(rangeQuery(r, c))) next.set(k, v);
-    startTransition(() => router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false }));
+    start(() => router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false }));
   };
 
   const view = useMemo(() => {
@@ -86,22 +86,11 @@ export function PerformancePanel({
           선택한 기간에는 기록이 없어요. {first && last && `${dot(first)} ~ ${dot(last)} 사이로 골라 주세요.`}
         </p>
       ) : (
-        <div className="space-y-4">
-          {/* 기간을 바꿔 새로 계산하는 동안: 흐려진 내용 위에, 시장 대비 수익률 박스의 가운데에 (흐려지지 않는) 스피너 */}
-          <div className="relative">
-            {pending && (
-              <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center">
-                <Spinner className="size-8 border-[3px]" />
-              </div>
-            )}
-            <div className={`transition-opacity ${pending ? "opacity-50" : ""}`}>
-              <BenchmarkChart points={daily.length >= 2 ? view.benchmark : benchmark} base={view.base} missing={missing} failed={failed} />
-            </div>
-          </div>
-          <div className={`transition-opacity ${pending ? "opacity-50" : ""}`}>
-            <PerformanceView points={view.daily} startValue={view.startValue} failed={failed} account={account} market={market} />
-          </div>
-        </div>
+        // 기간·계좌·시장을 바꿔 새로 계산하는 동안: 내용 전체 위에 어두운 막과 가운데 스피너 (앱 공통 로딩 동작)
+        <ReloadRegion className="space-y-4">
+          <BenchmarkChart points={daily.length >= 2 ? view.benchmark : benchmark} base={view.base} missing={missing} failed={failed} />
+          <PerformanceView points={view.daily} startValue={view.startValue} failed={failed} account={account} market={market} />
+        </ReloadRegion>
       )}
     </div>
   );

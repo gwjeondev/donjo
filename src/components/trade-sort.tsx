@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useReload } from "./reload-region";
 import { SortIcon } from "./icons";
 
 export type TradeOrder = "new" | "old";
@@ -10,6 +11,7 @@ export function TradeSort({ value, defaultOrder = "new" }: { value: TradeOrder; 
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { start } = useReload();
   const old = value === "old";
   return (
     <button
@@ -19,7 +21,7 @@ export function TradeSort({ value, defaultOrder = "new" }: { value: TradeOrder; 
         const target: TradeOrder = old ? "new" : "old";
         if (target === defaultOrder) next.delete("sort");
         else next.set("sort", target);
-        router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+        start(() => router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false }));
       }}
       title={old ? "오래된순" : "최신순"}
       aria-label={`정렬: ${old ? "오래된순" : "최신순"} (누르면 ${old ? "최신순" : "오래된순"})`}

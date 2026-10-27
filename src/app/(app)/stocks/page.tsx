@@ -2,6 +2,7 @@ import { FilterRow } from "@/components/filter-row";
 import { FxNote } from "@/components/fx-note";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
 import { PageHeader } from "@/components/page-header";
+import { ReloadRegion } from "@/components/reload-region";
 import { StockList } from "@/components/stock-list";
 import { loadPortfolio, loadPrefs } from "@/lib/data";
 import { mergeBySymbol } from "@/lib/portfolio";
@@ -26,7 +27,9 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
           {null}
         </FilterRow>
       </div>
-      <StockList key={`${account}|${market}`} positions={stocks} sort={prefs.holdings} />
+      <ReloadRegion>
+        <StockList key={`${account}|${market}`} positions={stocks} sort={prefs.holdings} />
+      </ReloadRegion>
     </>
   );
 }

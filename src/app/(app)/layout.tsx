@@ -6,6 +6,7 @@ import { BottomNav, SideNav } from "@/components/nav";
 import { PageBack } from "@/components/back-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencyProvider } from "@/components/currency";
+import { ReloadProvider } from "@/components/reload-region";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 
@@ -51,7 +52,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           <PageBack />
-          <CurrencyProvider>{children}</CurrencyProvider>
+          <ReloadProvider>
+            <CurrencyProvider>{children}</CurrencyProvider>
+          </ReloadProvider>
           {/* 모든 화면 맨 아래: 서비스 소개 바로가기 (PC·모바일 같은 위치) */}
           <footer className="mt-12 flex justify-center">
             <Link href="/about" className="inline-flex items-center gap-1 text-xs text-muted hover:text-brand">

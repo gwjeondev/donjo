@@ -3,6 +3,7 @@ import { TaxSaleList } from "@/components/income-lists";
 import { DividendList, RealizedList } from "@/components/income-money-lists";
 import { CurrencyToggle } from "@/components/currency";
 import { FilterRow, StatCard } from "@/components/filter-row";
+import { ReloadRegion } from "@/components/reload-region";
 import { MarketFilter, type MarketGroup } from "@/components/market-filter";
 import { PageHeader } from "@/components/page-header";
 import { QuerySelect, QueryTabs } from "@/components/query-select";
@@ -142,6 +143,8 @@ function IncomeView({
       <FilterRow accounts={accounts} account={account} extra={<MarketFilter value={market} />}>
         <RangeFilter key={`${range}|${custom.from}|${custom.to}`} range={range} custom={custom} fallback="1M" min={firstDate} max={today} shown={period} />
       </FilterRow>
+      {/* 필터를 바꿔 새로 불러오는 동안 이 영역에 어두운 막과 스피너 */}
+      <ReloadRegion className="space-y-5">
       {symbol && (
         <div>
           <FilterChip label="종목" name="symbol" value={symbolName(symbol, trades, allDividends)} params={params} />
@@ -232,6 +235,7 @@ function IncomeView({
           <DividendList dividends={dividends} accountName={Object.fromEntries(accountName)} showAccount={!account} />
         )}
       </section>
+      </ReloadRegion>
     </>
   );
 }
@@ -277,6 +281,8 @@ function TaxView({
       >
         {null}
       </FilterRow>
+      {/* 필터를 바꿔 새로 불러오는 동안 이 영역에 어두운 막과 스피너 */}
+      <ReloadRegion className="space-y-5">
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
@@ -322,6 +328,7 @@ function TaxView({
           <TaxSaleList sales={sales} accountName={accountName} showAccount={!account} />
         )}
       </section>
+      </ReloadRegion>
     </>
   );
 }

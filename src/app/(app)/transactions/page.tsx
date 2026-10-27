@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/page-header";
 import { AddRecordButton } from "@/components/add-record";
 import { QuerySelect } from "@/components/query-select";
 import { TradeList } from "@/components/trade-list";
+import { ReloadRegion } from "@/components/reload-region";
 import { FilterChip } from "@/components/filter-chip";
 import { symbolName } from "@/lib/format";
 import { prisma } from "@/lib/db";
@@ -118,16 +119,19 @@ export default async function TransactionsPage({
           <FilterChip label="종목" name="symbol" value={symbolName(symbol, allTrades, allDividends)} params={params} />
         </div>
       )}
-      <TradeList
-        trades={trades}
-        dividends={dividends}
-        cashFlows={cashFlows}
-        stocks={dividendStocks(everyTrade ?? allTrades)}
-        order={order}
-        accounts={accounts}
-        showAccount={!account}
-        emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || symbol || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 기간을 늘려 보세요.") : undefined}
-      />
+      {/* 필터·기간·검색·정렬을 바꿔 새로 불러오는 동안 목록 위에 어두운 막과 스피너 */}
+      <ReloadRegion>
+        <TradeList
+          trades={trades}
+          dividends={dividends}
+          cashFlows={cashFlows}
+          stocks={dividendStocks(everyTrade ?? allTrades)}
+          order={order}
+          accounts={accounts}
+          showAccount={!account}
+          emptyText={allTrades.length || allDividends.length || allCash.length ? (q || market || symbol || filtered ? "조건에 맞는 거래 기록이 없어요." : "최근 한 달 동안의 거래 기록이 없어요. 기간을 늘려 보세요.") : undefined}
+        />
+      </ReloadRegion>
     </>
   );
 }

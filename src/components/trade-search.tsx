@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useReload } from "./reload-region";
 import { useEffect, useRef, useState } from "react";
 import { CloseIcon, SearchIcon } from "./icons";
 
@@ -9,6 +10,7 @@ export function TradeSearch({ value = "" }: { value?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { start } = useReload();
   const [text, setText] = useState(value);
   const first = useRef(true);
 
@@ -22,7 +24,7 @@ export function TradeSearch({ value = "" }: { value?: string }) {
       const q = text.trim();
       if (q) next.set("q", q);
       else next.delete("q");
-      router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+      start(() => router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false }));
     }, 300);
     return () => clearTimeout(t);
     // params는 의도적으로 제외: 다른 필터를 바꿀 때 검색어를 다시 적용하지 않도록
