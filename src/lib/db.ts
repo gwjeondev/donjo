@@ -57,6 +57,8 @@ function createClient() {
   // 어떤 방식으로 접속하는지 서버 로그에 남긴다 (주소·비밀번호는 남기지 않음)
   console.info(`[db] ${mode}`);
   const client = new PrismaClient({ datasourceUrl: url });
+  // 서버가 뜰 때 DB 왕복 시간을 한 번 재서 로그에 남긴다 (함수 지역과 DB 지역이 어긋났는지 바로 알 수 있게)
+  if (process.env.VERCEL) void probeLatency(client);
   // 느린 쿼리만 로그에 남긴다 (연결 대기 시간 포함). 어디서 느린지 찾기 위해
   return client.$extends({
     query: {
@@ -74,6 +76,21 @@ function createClient() {
 }
 
 const SLOW_QUERY_MS = 300;
+
+async function probeLatency(client: PrismaClient) {
+  try {
+    const t0 = Date.now();
+    await client.$queryRaw`SELECT 1`;
+    const first = Date.now() - t0; // 연결을 새로 맺는 시간 포함
+    const t1 = Date.now();
+    await client.$queryRaw`SELECT 1`;
+    const rtt = Date.now() - t1; // 이미 맺은 연결에서 한 번 왕복하는 시간
+    const verdict = rtt >= 80 ? " ← 느려요: 함수와 DB 지역이 다른 곳일 가능성이 커요 (같은 지역이면 보통 20ms 이하)" : "";
+    console.info(`[db] 지역 점검: 함수 ${process.env.VERCEL_REGION ?? "?"} · 첫 쿼리(연결 포함) ${first}ms · 왕복 ${rtt}ms${verdict}`);
+  } catch (e) {
+    console.warn("[db] 지역 점검 실패:", (e as Error).message);
+  }
+}
 
 export const prisma = globalForPrisma.prisma ?? createClient();
 
