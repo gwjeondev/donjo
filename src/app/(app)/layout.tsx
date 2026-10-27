@@ -4,7 +4,6 @@ import Link from "next/link";
 import { InfoIcon, LogoutIcon, SettingsIcon } from "@/components/icons";
 import { BottomNav, SideNav } from "@/components/nav";
 import { PageBack } from "@/components/back-link";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencyProvider } from "@/components/currency";
 import { ReloadProvider } from "@/components/reload-region";
 import { prisma } from "@/lib/db";
@@ -25,7 +24,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </Link>
         <SideNav />
         <div className="mt-auto border-t border-line pt-4">
-          <div className="mb-3"><ThemeToggle full /></div>
           <Link data-nav-root href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
             <SettingsIcon /> <span className="min-w-0 flex-1 truncate">설정</span>
           </Link>
