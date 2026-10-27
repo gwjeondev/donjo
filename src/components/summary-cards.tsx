@@ -41,9 +41,10 @@ export function SummaryCards({
             </span>
           </p>
         )}
-        <p className={`mt-2 text-sm font-medium ${tone(summary.dayChangeKrw)}`}>
-          오늘 {fmtSigned(summary.dayChangeKrw)}
-          {dayBase > 0 && ` (${fmtPct(summary.dayChangeKrw / dayBase)})`}
+        {/* 좁으면 금액과 퍼센트 사이에서만 줄이 바뀐다 */}
+        <p className={`mt-2 flex flex-wrap gap-x-1 text-sm font-medium ${tone(summary.dayChangeKrw)}`} data-wrap="ok">
+          <span className="whitespace-nowrap">오늘 {fmtSigned(summary.dayChangeKrw)}</span>
+          {dayBase > 0 && <span className="whitespace-nowrap">({fmtPct(summary.dayChangeKrw / dayBase)})</span>}
         </p>
       </div>
       <div className="card p-5">

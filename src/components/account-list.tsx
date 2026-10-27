@@ -54,6 +54,15 @@ export function AccountList({ accounts, sort: initialSort }: { accounts: Account
             <p className={`mt-1 text-sm ${tone(a.summary.unrealizedPnlKrw)}`}>
               {fmtSigned(a.summary.unrealizedPnlKrw)} ({fmtPct(a.summary.returnRate)})
             </p>
+            {/* 오늘 등락: 어제 종가 기준 주식 평가금액 대비 (종목 카드·총자산 카드와 같은 기준) */}
+            {a.summary.valueKrw - a.summary.dayChangeKrw > 0 && (
+              <p className="mt-1 truncate text-xs text-ink-2">
+                오늘{" "}
+                <span className={tone(a.summary.dayChangeKrw)}>
+                  {fmtSigned(a.summary.dayChangeKrw)} ({fmtPct(a.summary.dayChangeKrw / (a.summary.valueKrw - a.summary.dayChangeKrw))})
+                </span>
+              </p>
+            )}
             <p className="mt-3 text-xs text-muted">
               보유 {a.count}종목{a.cashKrw != null && <> · 현금 {fmtKrw(a.cashKrw)}</>} · 실현손익{" "}
               <span className={tone(a.summary.realizedPnlKrw)}>{fmtSigned(a.summary.realizedPnlKrw)}</span>
