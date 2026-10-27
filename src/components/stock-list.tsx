@@ -68,15 +68,19 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
                     <p className={`mt-1 text-sm ${tone(p.unrealizedPnlKrw)}`}>
                       {fmtSigned(p.unrealizedPnlKrw)} ({fmtPct(p.returnRate)})
                     </p>
+                    {day != null && (
+                      <p className="mt-1 truncate text-xs text-ink-2">
+                        오늘{" "}
+                        <span className={tone(p.dayChangeKrw)}>
+                          {fmtSigned(p.dayChangeKrw)} ({fmtPct(day)})
+                        </span>
+                      </p>
+                    )}
                   </>
                 )}
                 <p className="mt-3 truncate text-xs text-muted">
                   {isSold ? "다 팔았어요" : `${fmtQty(p.quantity)}주`}
-                  {day != null && !isSold && (
-                    <>
-                      {" "}· 오늘 <span className={tone(day)}>{fmtPct(day)}</span>
-                    </>
-                  )}{" "}
+{" "}
                   · 실현손익 <span className={tone(p.realizedPnlKrw)}>{fmtSigned(p.realizedPnlKrw)}</span>
                 </p>
               </Link>

@@ -13,10 +13,16 @@ export function StockSummary({ position, usdKrw }: { position: ValuedPosition; u
   const { currency } = useDisplayCurrency();
   const d = displayFigures(position, currency, usdKrw);
   const realized = d.currency === "USD" ? position.realizedPnl : position.realizedPnlKrw;
+  const dayRate = position.price != null && position.previousClose ? position.price / position.previousClose - 1 : null;
+  const dayUsd = position.price != null && position.previousClose != null ? position.quantity * (position.price - position.previousClose) : 0;
   const items = [
     { label: "보유수량", value: `${fmtQty(position.quantity)}주` },
     { label: "평균단가", value: position.quantity > 0 ? fmtPrice(d.avgCost, d.currency) : "-" },
     { label: "평가금액", value: fmtPrice(d.value, d.currency) },
+    // 오늘 등락: 보유 수량 × (현재가 − 전일 종가). 달러로 보면 달러 금액
+    ...(position.quantity > 0 && dayRate != null
+      ? [{ label: "오늘", value: signed(d.currency === "USD" ? dayUsd : position.dayChangeKrw, d.currency), sub: fmtPct(dayRate), tone: position.dayChangeKrw }]
+      : []),
     {
       label: "평가손익",
       value: signed(d.pnl, d.currency),
@@ -33,8 +39,8 @@ export function StockSummary({ position, usdKrw }: { position: ValuedPosition; u
         </div>
       )}
       <div className="card @container">
-        {/* 카드 폭에 맞춰 2·3·5열 (값이 잘리지 않게) */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-5 @xl:grid-cols-3 @4xl:grid-cols-5">
+        {/* 카드 폭에 맞춰 2·3·6열 (값이 잘리지 않게) */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-5 @xl:grid-cols-3 @5xl:grid-cols-6">
           {items.map((it) => (
             <div key={it.label} className="min-w-0">
               <p className="text-xs text-ink-2">{it.label}</p>
