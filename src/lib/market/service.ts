@@ -1,6 +1,7 @@
 // 시세 조회 + DB 캐시. 외부 API 장애 시 마지막으로 저장된 값을 사용한다.
 import "server-only";
 import { Prisma } from "@prisma/client";
+import { after } from "next/server";
 import { prisma } from "../db";
 import { addDays, FX_SYMBOL, type PriceSeries } from "../performance";
 import { koreanSource, provider } from ".";
@@ -16,28 +17,23 @@ const toDate = (d: string) => new Date(`${d}T00:00:00Z`);
 const fromDate = (d: Date) => d.toISOString().slice(0, 10);
 const todayStr = () => fromDate(new Date());
 
-/** 종목 시세. maxAgeMs보다 오래된 캐시만 외부에서 다시 받는다 */
-export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Promise<Map<string, Quote>> {
-  const unique = [...new Set(symbols)];
-  if (unique.length === 0) return new Map();
-  // DB 캐시 조회가 실패해도 화면이 깨지지 않게 외부 시세로만 진행한다
-  const cached = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } } }).catch((e) => {
-    console.error("[market] 시세 캐시 조회 실패:", (e as Error).message);
-    return [];
-  });
-  const bySymbol = new Map(cached.map((c) => [c.symbol, c]));
-  const now = Date.now();
+/** 화면을 보여 준 뒤에 처리한다 (요청 밖에서 불리면 그냥 바로 실행) */
+function inBackground(task: () => Promise<unknown>) {
+  const run = () => task().catch((e) => console.error("[market] 백그라운드 갱신 실패:", (e as Error).message));
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
+}
 
-  // 오래된 종목만 외부에서 받는다 (동시에 몇 개씩만)
-  const stale = unique.filter((symbol) => {
-    const at = bySymbol.get(symbol)?.quoteFetchedAt;
-    return !at || now - at.getTime() >= maxAgeMs;
-  });
+/** 외부에서 시세를 받아 DB 캐시에 저장한다. 받은 시세를 돌려준다 */
+async function fetchAndStoreQuotes(list: string[]): Promise<Map<string, Quote>> {
   const fetched = new Map<string, Quote>();
   const failed: string[] = [];
-  for (let i = 0; i < stale.length; i += QUOTE_CONCURRENCY) {
+  for (let i = 0; i < list.length; i += QUOTE_CONCURRENCY) {
     await Promise.all(
-      stale.slice(i, i + QUOTE_CONCURRENCY).map(async (symbol) => {
+      list.slice(i, i + QUOTE_CONCURRENCY).map(async (symbol) => {
         try {
           fetched.set(symbol, { ...(await provider.quote(symbol)), fetchedAt: new Date() });
         } catch (e) {
@@ -64,6 +60,33 @@ export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Pro
       ])
       .catch((e) => console.error("[market] 시세 캐시 저장 실패:", (e as Error).message));
   }
+  return fetched;
+}
+
+/**
+ * 종목 시세. maxAgeMs보다 오래된 캐시만 외부에서 다시 받는다.
+ * background: 저장된 가격이 있는 종목은 지금 바로 그 가격을 쓰고, 갱신은 화면을 보여 준 뒤에 한다
+ * (외부 시세 요청이 느려도 화면이 기다리지 않는다). 저장된 가격이 없는 종목만 기다린다.
+ */
+export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS, { background = false } = {}): Promise<Map<string, Quote>> {
+  const unique = [...new Set(symbols)];
+  if (unique.length === 0) return new Map();
+  // DB 캐시 조회가 실패해도 화면이 깨지지 않게 외부 시세로만 진행한다
+  const cached = await prisma.symbolCache.findMany({ where: { symbol: { in: unique } } }).catch((e) => {
+    console.error("[market] 시세 캐시 조회 실패:", (e as Error).message);
+    return [];
+  });
+  const bySymbol = new Map(cached.map((c) => [c.symbol, c]));
+  const now = Date.now();
+
+  const stale = unique.filter((symbol) => {
+    const at = bySymbol.get(symbol)?.quoteFetchedAt;
+    return !at || now - at.getTime() >= maxAgeMs;
+  });
+  const later = background ? stale.filter((s) => bySymbol.get(s)?.price != null) : [];
+  const now_ = stale.filter((s) => !later.includes(s));
+  if (later.length) inBackground(() => fetchAndStoreQuotes(later));
+  const fetched = await fetchAndStoreQuotes(now_);
 
   const results = unique.map((symbol): Quote | null => {
     const q = fetched.get(symbol);
@@ -109,9 +132,17 @@ async function refreshBars(symbols: string[], from: string, doneAt?: Map<string,
     if (done && hasEarliest && r?._max.date && fromDate(r._max.date) >= done) return [];
     // 최근에 받았으면 건너뛴다 (받아 둔 일봉이 아예 없는데 최근에 시도했다면 받을 수 없는 종목이다)
     if (at && Date.now() - at.getTime() < BARS_TTL_MS && (hasEarliest || !r)) return [];
-    return [{ symbol, start: hasEarliest && r?._max.date ? addDays(fromDate(r._max.date), -7) : from }];
+    return [{ symbol, covered: hasEarliest, start: hasEarliest && r?._max.date ? addDays(fromDate(r._max.date), -7) : from }];
   });
 
+  // 필요한 구간의 일봉이 이미 있는 종목은 최신 며칠만 갱신하면 되므로 화면을 보여 준 뒤에 한다. 일봉이 모자란 종목만 기다린다
+  const wait = jobs.filter((j) => !j.covered);
+  const later = jobs.filter((j) => j.covered);
+  if (later.length) inBackground(() => runBarJobs(later));
+  await runBarJobs(wait);
+}
+
+async function runBarJobs(jobs: { symbol: string; start: string }[]) {
   for (let i = 0; i < jobs.length; i += REFRESH_CONCURRENCY) {
     await Promise.all(
       jobs.slice(i, i + REFRESH_CONCURRENCY).map(async ({ symbol, start }) => {

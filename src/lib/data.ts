@@ -128,7 +128,8 @@ export async function loadPortfolio(userId: string, accountId?: string) {
   const positions = computePositions(trades);
   const held = positions.filter((p) => p.quantity > 0);
   // 환율도 같은 조회에 넣는다 (DB 왕복 한 번 절약)
-  const quotes = await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL]);
+  // 저장된 시세가 있으면 바로 쓰고 갱신은 화면을 보여 준 뒤에 한다 (외부 시세 요청이 느려도 화면이 기다리지 않게)
+  const quotes = await getQuotes([...held.map((p) => p.symbol), FX_SYMBOL], undefined, { background: true });
   const fx = usdKrwFrom(quotes);
   const valued = positions.map((p) => valuePosition(p, quotes.get(p.symbol), fx.rate));
   // 화면에 보이는 시세 중 가장 오래된 것의 시각 ("n분 전 시세" 표시용)
@@ -199,7 +200,7 @@ async function computePerformance(userId: string, accountId?: string, rangeFrom?
   const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from, doneAt, windows);
   const today = todayStr();
   // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다 (보유 중인 종목만)
-  const quotes = await getQuotes([...new Set(symbols.filter((s) => heldNow.has(s))), "KRW=X"]);
+  const quotes = await getQuotes([...new Set(symbols.filter((s) => heldNow.has(s))), "KRW=X"], undefined, { background: true });
   for (const [s, q] of quotes) {
     if (!prices.has(s)) prices.set(s, new Map());
     prices.get(s)!.set(today, q.price);
