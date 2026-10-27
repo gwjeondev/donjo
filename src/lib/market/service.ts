@@ -40,6 +40,10 @@ export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Pro
           return q;
         } catch (e) {
           console.warn(`[market] quote 실패 ${symbol}:`, (e as Error).message);
+          // 받을 수 없는 종목(상장폐지 등)은 시각만 남겨, 캐시 유효 시간 동안 다시 묻지 않는다 (저장된 시세는 그대로)
+          await prisma.symbolCache
+            .upsert({ where: { symbol }, create: { symbol, quoteFetchedAt: new Date() }, update: { quoteFetchedAt: new Date() } })
+            .catch(() => {});
         }
       }
       if (c?.price == null) return null;
@@ -79,7 +83,8 @@ async function refreshBars(symbols: string[], from: string) {
     const r = range.get(symbol);
     const hasEarliest = !!r?._min.date && fromDate(r._min.date) <= from;
     const at = fetchedAt.get(symbol);
-    if (hasEarliest && at && Date.now() - at.getTime() < BARS_TTL_MS) return [];
+    // 최근에 받았으면 건너뛴다 (받아 둔 일봉이 아예 없는데 최근에 시도했다면 받을 수 없는 종목이다)
+    if (at && Date.now() - at.getTime() < BARS_TTL_MS && (hasEarliest || !r)) return [];
     return [{ symbol, start: hasEarliest && r?._max.date ? addDays(fromDate(r._max.date), -7) : from }];
   });
 
@@ -102,6 +107,10 @@ async function refreshBars(symbols: string[], from: string) {
           ]);
         } catch (e) {
           console.warn(`[market] history 실패 ${symbol}:`, (e as Error).message);
+          // 일봉도 실패하면 시각을 남겨 캐시 유효 시간 동안 다시 묻지 않는다
+          await prisma.symbolCache
+            .upsert({ where: { symbol }, create: { symbol, barsFetchedAt: new Date() }, update: { barsFetchedAt: new Date() } })
+            .catch(() => {});
         }
       }),
     );
