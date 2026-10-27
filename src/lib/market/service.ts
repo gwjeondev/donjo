@@ -6,6 +6,8 @@ import { koreanSource, provider } from ".";
 import type { Quote } from "./types";
 
 const QUOTE_TTL_MS = 10 * 60 * 1000;
+/** 외부 시세를 동시에 몇 종목씩 받을지 */
+const QUOTE_CONCURRENCY = 8;
 const BARS_TTL_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_USD_KRW = 1350;
 
@@ -25,37 +27,50 @@ export async function getQuotes(symbols: string[], maxAgeMs = QUOTE_TTL_MS): Pro
   const bySymbol = new Map(cached.map((c) => [c.symbol, c]));
   const now = Date.now();
 
-  const results = await Promise.all(
-    unique.map(async (symbol): Promise<Quote | null> => {
-      const c = bySymbol.get(symbol);
-      const fresh = c?.quoteFetchedAt && now - c.quoteFetchedAt.getTime() < maxAgeMs;
-      if (!fresh) {
+  // 오래된 종목만 외부에서 받는다 (동시에 몇 개씩만)
+  const stale = unique.filter((symbol) => {
+    const at = bySymbol.get(symbol)?.quoteFetchedAt;
+    return !at || now - at.getTime() >= maxAgeMs;
+  });
+  const fetched = new Map<string, Quote>();
+  const failed: string[] = [];
+  for (let i = 0; i < stale.length; i += QUOTE_CONCURRENCY) {
+    await Promise.all(
+      stale.slice(i, i + QUOTE_CONCURRENCY).map(async (symbol) => {
         try {
-          const q = { ...(await provider.quote(symbol)), fetchedAt: new Date() };
-          await prisma.symbolCache.upsert({
-            where: { symbol },
-            create: { symbol, price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: new Date() },
-            update: { price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: new Date() },
-          });
-          return q;
+          fetched.set(symbol, { ...(await provider.quote(symbol)), fetchedAt: new Date() });
         } catch (e) {
+          failed.push(symbol);
           console.warn(`[market] quote 실패 ${symbol}:`, (e as Error).message);
-          // 받을 수 없는 종목(상장폐지 등)은 시각만 남겨, 캐시 유효 시간 동안 다시 묻지 않는다 (저장된 시세는 그대로)
-          await prisma.symbolCache
-            .upsert({ where: { symbol }, create: { symbol, quoteFetchedAt: new Date() }, update: { quoteFetchedAt: new Date() } })
-            .catch(() => {});
         }
-      }
-      if (c?.price == null) return null;
-      return {
-        symbol,
-        price: Number(c.price),
-        previousClose: c.previousClose == null ? null : Number(c.previousClose),
-        currency: c.currency,
-        fetchedAt: c.quoteFetchedAt ?? undefined,
-      };
-    }),
-  );
+      }),
+    );
+  }
+  // 저장은 한 번에 묶어서 (종목마다 따로 저장하면 DB 연결을 한꺼번에 많이 잡아 연결 대기 시간 초과가 난다).
+  // 실패한 종목(상장폐지 등)도 시각만 남겨, 캐시 유효 시간 동안은 다시 묻지 않는다
+  if (fetched.size || failed.length) {
+    const at = new Date();
+    await prisma
+      .$transaction([
+        ...[...fetched.values()].map((q) =>
+          prisma.symbolCache.upsert({
+            where: { symbol: q.symbol },
+            create: { symbol: q.symbol, price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: at },
+            update: { price: q.price, previousClose: q.previousClose, currency: q.currency, quoteFetchedAt: at },
+          }),
+        ),
+        ...failed.map((symbol) => prisma.symbolCache.upsert({ where: { symbol }, create: { symbol, quoteFetchedAt: at }, update: { quoteFetchedAt: at } })),
+      ])
+      .catch((e) => console.error("[market] 시세 캐시 저장 실패:", (e as Error).message));
+  }
+
+  const results = unique.map((symbol): Quote | null => {
+    const q = fetched.get(symbol);
+    if (q) return q;
+    const c = bySymbol.get(symbol);
+    if (c?.price == null) return null;
+    return { symbol, price: Number(c.price), previousClose: c.previousClose == null ? null : Number(c.previousClose), currency: c.currency, fetchedAt: c.quoteFetchedAt ?? undefined };
+  });
   return new Map(results.filter((q): q is Quote => q !== null).map((q) => [q.symbol, q]));
 }
 
