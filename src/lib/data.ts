@@ -6,7 +6,7 @@ import { cashBalances, cashTimeline, totalCash, type CashFlow } from "./cash";
 import { dividendNetKrw, type Dividend } from "./income";
 import { prisma } from "./db";
 import { readPrefs } from "./prefs";
-import { getPriceSeries, getQuotes, todayStr, usdKrwFrom } from "./market/service";
+import { getPriceSeries, getQuotes, todayStr, usdKrwFrom, type PriceWindows } from "./market/service";
 import { addDays, benchmarkSeries, buildDailySeries, FX_SYMBOL, type DailyPoint } from "./performance";
 
 /** 수익률 비교용 지수 (Yahoo 심볼) */
@@ -188,7 +188,15 @@ async function computePerformance(userId: string, accountId?: string, rangeFrom?
   const heldNow = new Set(computePositions(trades).filter((p) => p.quantity > 0).map((p) => p.symbol));
   const doneAt = new Map<string, string>();
   for (const t of trades) if (!heldNow.has(t.symbol) && t.tradeDate > (doneAt.get(t.symbol) ?? "")) doneAt.set(t.symbol, t.tradeDate);
-  const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from, doneAt);
+  // 종목마다 보유한 기간의 시세만 읽는다: 첫 거래일부터, 지금 안 가진 종목은 마지막 거래일(+며칠)까지
+  const windows: PriceWindows = new Map();
+  for (const t of trades) {
+    const w = windows.get(t.symbol);
+    if (!w) windows.set(t.symbol, { from: t.tradeDate });
+    else if (t.tradeDate < w.from) w.from = t.tradeDate;
+  }
+  for (const [symbol, end] of doneAt) windows.get(symbol)!.to = addDays(end, 5);
+  const prices = await getPriceSeries([...symbols, ...Object.values(BENCHMARKS)], from, doneAt, windows);
   const today = todayStr();
   // 오늘 가격은 최신 시세로 덮어써서 대시보드 평가금액과 맞춘다 (보유 중인 종목만)
   const quotes = await getQuotes([...new Set(symbols.filter((s) => heldNow.has(s))), "KRW=X"]);

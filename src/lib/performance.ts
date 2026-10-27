@@ -86,7 +86,10 @@ export function buildDailySeries(
         bought += cost;
       } else {
         const q = Math.min(t.quantity, held);
-        qty.set(t.symbol, held - q);
+        // 소수점 주식을 다 팔고 남는 계산 찌꺼기(1e-14주 등)는 0으로 본다. 남겨 두면 보유 금액이 0에 가까운 값이 되어
+        // 그 값으로 나눈 일별 수익률이 엉뚱한 숫자가 된다 (보유 종목 계산과 같은 기준)
+        const left = held - q;
+        qty.set(t.symbol, left < 1e-9 ? 0 : left);
         flow -= (q * t.price - t.fee - t.tax) * fx;
       }
       lastTradePrice.set(t.symbol, t.price);

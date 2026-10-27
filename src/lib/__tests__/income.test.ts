@@ -57,3 +57,25 @@ describe("배당금과 수익률", () => {
     expect(pts.at(-1)!.ret).toBeCloseTo(0.05);
   });
 });
+
+describe("소수점 주식을 다 판 뒤", () => {
+  it("계산 찌꺼기 때문에 수익률이 엉뚱한 값이 되지 않는다 (보유 0이면 수익률 0)", async () => {
+    const { buildDailySeries } = await import("../performance");
+    // 0.1주를 세 번 사서 0.3주를 판다: 부동소수점으로는 0.1+0.1+0.1 − 0.3 = 5.5e-17주가 남는다
+    const trades = [
+      t({ symbol: "AAPL", market: "US", quantity: 0.1, price: 200, fxRate: 1400, tradeDate: "2025-01-06" }),
+      t({ symbol: "AAPL", market: "US", quantity: 0.1, price: 200, fxRate: 1400, tradeDate: "2025-01-06" }),
+      t({ symbol: "AAPL", market: "US", quantity: 0.1, price: 200, fxRate: 1400, tradeDate: "2025-01-06" }),
+      t({ symbol: "AAPL", market: "US", type: "SELL", quantity: 0.3, price: 210, fxRate: 1400, tradeDate: "2025-01-07" }),
+    ];
+    const bars = (p: number) => new Map(["2025-01-06", "2025-01-07", "2025-01-08", "2025-01-09", "2025-01-10"].map((d, i) => [d, p + i]));
+    const prices = new Map([["AAPL", bars(200)], ["KRW=X", bars(1400)]]);
+    const pts = buildDailySeries(trades, prices, "2025-01-10");
+    const after = pts.filter((p) => p.date > "2025-01-07");
+    expect(after.length).toBeGreaterThan(0);
+    for (const p of after) {
+      expect(p.value).toBe(0);
+      expect(p.ret).toBe(0);
+    }
+  });
+});

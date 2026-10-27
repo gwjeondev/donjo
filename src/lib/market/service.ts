@@ -1,5 +1,6 @@
 // 시세 조회 + DB 캐시. 외부 API 장애 시 마지막으로 저장된 값을 사용한다.
 import "server-only";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { addDays, FX_SYMBOL, type PriceSeries } from "../performance";
 import { koreanSource, provider } from ".";
@@ -143,18 +144,30 @@ async function refreshBars(symbols: string[], from: string, doneAt?: Map<string,
 /**
  * 일봉 시세. doneAt: 더 이상 보유하지 않는 종목의 마지막 보유일 (그날까지 일봉이 저장돼 있으면 다시 받지 않는다)
  */
-export async function getPriceSeries(symbols: string[], from: string, doneAt?: Map<string, string>): Promise<PriceSeries> {
+/** 종목별로 필요한 일봉 구간 (그 종목을 보유한 기간). 없으면 from부터 오늘까지 */
+export type PriceWindows = Map<string, { from: string; to?: string }>;
+
+export async function getPriceSeries(symbols: string[], from: string, doneAt?: Map<string, string>, windows?: PriceWindows): Promise<PriceSeries> {
   const unique = [...new Set([...symbols, FX_SYMBOL])];
   // 갱신이 실패해도 이미 저장된 일봉으로 계산한다
   await refreshBars(unique, from, doneAt).catch((e) => console.error("[market] 일봉 갱신 실패:", (e as Error).message));
-  const bars = await prisma.priceBar.findMany({
-    where: { symbol: { in: unique }, date: { gte: toDate(addDays(from, -10)) } },
-    orderBy: { date: "asc" },
+  // 읽을 구간: 종목마다 [보유 시작 10일 전, 보유 끝]. 다 판 종목의 지난 몇 년치까지 읽지 않는다.
+  // 줄마다 날짜·Decimal 객체를 만드는 findMany 대신 필요한 값만 단순 형태로 받는다 (수만 줄이면 이 변환이 가장 오래 걸린다)
+  const starts = unique.map((s) => {
+    const f = windows?.get(s)?.from;
+    return addDays(f && f > from ? f : from, -10);
   });
+  const ends = unique.map((s) => windows?.get(s)?.to ?? "9999-12-31");
+  const bars = await prisma.$queryRaw<{ symbol: string; d: string; c: number }[]>(Prisma.sql`
+    SELECT b."symbol", b."date"::text AS d, b."close"::float8 AS c
+    FROM "PriceBar" b
+    JOIN unnest(${unique}::text[], ${starts}::date[], ${ends}::date[]) AS w(symbol, f, t)
+      ON b."symbol" = w.symbol AND b."date" BETWEEN w.f AND w.t
+    ORDER BY b."symbol", b."date"`);
   const series: PriceSeries = new Map();
   for (const b of bars) {
     if (!series.has(b.symbol)) series.set(b.symbol, new Map());
-    series.get(b.symbol)!.set(fromDate(b.date), Number(b.close));
+    series.get(b.symbol)!.set(b.d, b.c);
   }
   return series;
 }
