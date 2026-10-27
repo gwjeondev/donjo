@@ -43,12 +43,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <img src="/icons/icon-192.png" alt="" className="size-7 rounded-lg" />
             <span className="font-bold">돈조</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link data-nav-root href="/settings" className="p-1 text-ink-2" aria-label="설정" title="설정">
-              <SettingsIcon />
-            </Link>
-          </div>
+          <Link data-nav-root href="/settings" className="p-1 text-ink-2" aria-label="설정" title="설정">
+            <SettingsIcon />
+          </Link>
         </header>
         <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           <PageBack />
