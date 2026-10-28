@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { fmtKrw, fmtPct, fmtQty, fmtSigned, tone } from "@/lib/format";
-import type { ValuedPosition } from "@/lib/portfolio";
+import { fmtPct, fmtPrice, fmtQty, fmtSignedPrice, tone } from "@/lib/format";
+import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
 import { HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
+import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { ChevronRightIcon } from "./icons";
 import { SortControl } from "./sort-control";
 
@@ -18,7 +19,8 @@ const VALUE: Record<HoldingSortKey, (p: ValuedPosition) => number | string> = {
 };
 
 /** 종목 카드 목록 (계좌 목록과 같은 모양). 기본은 보유 중인 종목, 다 판 종목은 따로 펼쳐 본다 */
-export function StockList({ positions, sort: initialSort }: { positions: ValuedPosition[]; sort: Sort<HoldingSortKey> }) {
+export function StockList({ positions, sort: initialSort, usdKrw }: { positions: ValuedPosition[]; sort: Sort<HoldingSortKey>; usdKrw: number }) {
+  const { currency } = useDisplayCurrency();
   const [sort, setSort] = useState(initialSort);
   const [showSold, setShowSold] = useState(false);
   const held = positions.filter((p) => p.quantity > 0);
@@ -36,7 +38,10 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
         ) : (
           <span />
         )}
-        {shown.length > 1 && <SortControl options={HOLDING_SORTS} value={sort} onChange={setSort} />}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {shown.length > 1 && <SortControl options={HOLDING_SORTS} value={sort} onChange={setSort} />}
+          {positions.some((p) => p.currency === "USD") && <CurrencyToggle />}
+        </div>
       </div>
       {shown.length === 0 ? (
         <p className="card p-8 text-center text-sm text-muted">보유 중인 종목이 없어요.</p>
@@ -45,6 +50,10 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
           {shown.map((p) => {
             const day = p.price != null && p.previousClose ? p.price / p.previousClose - 1 : null;
             const isSold = p.quantity <= 0;
+            const d = displayFigures(p, currency, usdKrw);
+            const usd = d.currency === "USD";
+            const dayChange = usd ? p.quantity * ((p.price ?? 0) - (p.previousClose ?? 0)) : p.dayChangeKrw;
+            const realized = usd ? p.realizedPnl : p.realizedPnlKrw;
             return (
               <Link
                 key={p.symbol}
@@ -61,15 +70,15 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
                   <p className="mt-3 text-2xl font-bold text-muted">보유 없음</p>
                 ) : (
                   <>
-                    <p className="mt-3 text-2xl font-bold">{fmtKrw(p.valueKrw)}</p>
-                    <p className={`mt-1 text-sm ${tone(p.unrealizedPnlKrw)}`}>
-                      {fmtSigned(p.unrealizedPnlKrw)} ({fmtPct(p.returnRate)})
+                    <p className="mt-3 text-2xl font-bold">{fmtPrice(d.value, d.currency)}</p>
+                    <p className={`mt-1 text-sm ${tone(d.pnl)}`}>
+                      {fmtSignedPrice(d.pnl, d.currency)} ({fmtPct(d.returnRate)})
                     </p>
                     {day != null && (
                       <p className="mt-1 truncate text-xs text-ink-2">
                         오늘{" "}
-                        <span className={tone(p.dayChangeKrw)}>
-                          {fmtSigned(p.dayChangeKrw)} ({fmtPct(day)})
+                        <span className={tone(dayChange)}>
+                          {fmtSignedPrice(dayChange, d.currency)} ({fmtPct(day)})
                         </span>
                       </p>
                     )}
@@ -78,7 +87,7 @@ export function StockList({ positions, sort: initialSort }: { positions: ValuedP
                 <p className="mt-3 truncate text-xs text-muted">
                   {isSold ? "다 팔았어요" : `${fmtQty(p.quantity)}주`}
 {" "}
-                  · 실현손익 <span className={tone(p.realizedPnlKrw)}>{fmtSigned(p.realizedPnlKrw)}</span>
+                  · 실현손익 <span className={tone(realized)}>{fmtSignedPrice(realized, d.currency)}</span>
                 </p>
               </Link>
             );

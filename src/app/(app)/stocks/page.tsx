@@ -28,7 +28,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
         </FilterRow>
       </div>
       <ReloadRegion>
-        <StockList key={`${account}|${market}`} positions={stocks} sort={prefs.holdings} />
+        <StockList key={`${account}|${market}`} positions={stocks} sort={prefs.holdings} usdKrw={fx.rate} />
       </ReloadRegion>
     </>
   );
