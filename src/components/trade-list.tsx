@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { deleteTransaction } from "@/app/actions";
 import { CASH_LABEL, type CashFlow } from "@/lib/cash";
-import { fmtKrw, fmtPrice, fmtQty, MARKET_LABEL } from "@/lib/format";
+import { fmtFx, fmtKrw, fmtPrice, fmtQty, MARKET_LABEL } from "@/lib/format";
 import { dividendNetKrw, type Dividend } from "@/lib/income";
 import { currencyOf, type DisplayCurrency, type Trade } from "@/lib/portfolio";
 import { useDisplayCurrency } from "./currency";
@@ -172,7 +172,11 @@ export function TradeList({
                   <td className="px-3 py-3 text-right">{fmtQty(t.quantity)}</td>
                   <td className="px-3 py-3 text-right">
                     {fmtPrice(f.price, f.currency)}
-                    {t.market === "US" && <div className="text-xs text-muted">@{fmtQty(t.fxRate)}</div>}
+                    {t.market === "US" && (
+                      <div className="text-xs text-muted">
+                        {t.type === "BUY" ? "매수" : "매도"}환율 {fmtFx(t.fxRate)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-right font-medium">{fmtPrice(f.amount, f.currency)}</td>
                   <td className="px-2 py-3">
@@ -252,7 +256,7 @@ export function TradeList({
               ["수량", `${fmtQty(t.quantity)}주`],
               ["단가", fmtPrice(f.price, f.currency)],
             ];
-            if (t.market === "US") rows.push(["환율", `${fmtQty(t.fxRate)}원`]);
+            if (t.market === "US") rows.push([t.type === "BUY" ? "매수환율" : "매도환율", fmtFx(t.fxRate)]);
             if (t.fee || t.tax) rows.push(["수수료·세금", fmtPrice((t.fee + t.tax) * (f.currency === "KRW" && t.market === "US" ? t.fxRate : 1), f.currency)]);
             if (t.memo) rows.push(["메모", t.memo]);
             return (
