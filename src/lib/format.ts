@@ -11,6 +11,8 @@ export const fmtKrwShort = (n: number) => {
 };
 export const fmtPrice = (n: number, currency: "KRW" | "USD") =>
   currency === "USD" ? `$${usd.format(n)}` : fmtKrw(n);
+/** 환율 (1달러 = n원), 소수 둘째 자리까지 */
+export const fmtFx = (n: number) => `${n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원`;
 export const fmtQty = (n: number) => qty.format(n);
 export const fmtPct = (r: number, signed = true) =>
   `${signed && r > 0 ? "+" : ""}${(r * 100).toFixed(2)}%`;

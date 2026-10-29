@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { fmtPct, fmtPrice, fmtQty, MARKET_LABEL, tone } from "@/lib/format";
-import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, MARKET_LABEL, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
 import { DEFAULT_PREFS, HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { DetailCard, NameLink } from "./detail-card";
@@ -29,6 +29,30 @@ const HOLDING_VALUE: Record<HoldingSortKey, (p: ValuedPosition) => number | stri
   realized: (p) => p.realizedPnlKrw,
   dayChange: (p) => (p.price != null && p.previousClose ? p.price / p.previousClose - 1 : 0),
   name: (p) => p.name,
+};
+
+/** 환차손익 칸 (해외 종목만, 항상 원화). 아래 줄은 평균 매수환율 */
+function FxCell({ p, usdKrw }: { p: ValuedPosition; usdKrw: number }) {
+  const rate = avgBuyFxRate(p);
+  if (rate == null) return <td className="px-3 py-3 text-right text-muted">-</td>;
+  const fx = unrealizedFxKrw(p, usdKrw);
+  return (
+    <td className="px-3 py-3 text-right">
+      <div className={tone(fx)}>{fmtSigned(fx)}</div>
+      <div className="text-xs text-muted">매수 {fmtFx(rate)}</div>
+    </td>
+  );
+}
+
+/** 카드용 환차손익·평균 매수환율 줄 (해외 종목만) */
+const fxRows = (p: ValuedPosition, usdKrw: number): [string, string, string?][] => {
+  const rate = avgBuyFxRate(p);
+  if (rate == null) return [];
+  const fx = unrealizedFxKrw(p, usdKrw);
+  return [
+    ["환차손익", fmtSigned(fx), tone(fx)],
+    ["평균 매수환율", fmtFx(rate)],
+  ];
 };
 
 const stockHref = (symbol: string) => `/stocks/${encodeURIComponent(symbol)}`;
@@ -81,6 +105,7 @@ export function Holdings({
                 <th className="w-36 px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
                 <th className="w-40 px-3 py-2.5 text-right font-medium">평가금액</th>
                 <th className="w-40 px-3 py-2.5 text-right font-medium">평가손익</th>
+                {hasUs && <th className="w-32 px-3 py-2.5 text-right font-medium">환차손익</th>}
                 <th className="hidden w-24 px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
               </tr>
             </thead>
@@ -109,6 +134,7 @@ export function Holdings({
                     <div>{signed(d.pnl, d.currency)}</div>
                     <div className="text-xs">{fmtPct(d.returnRate)}</div>
                   </td>
+                  {hasUs && <FxCell p={p} usdKrw={usdKrw} />}
                   <td className="hidden px-4 py-3 text-right text-ink-2 xl:table-cell">
                     {totalValue > 0 ? fmtPct(p.valueKrw / totalValue, false) : "-"}
                   </td>
@@ -134,6 +160,7 @@ export function Holdings({
                     ["보유수량", `${fmtQty(p.quantity)}주`],
                     ["현재가", d.price != null ? fmtPrice(d.price, d.currency) : "시세 없음"],
                     ["평단가", fmtPrice(d.avgCost, d.currency)],
+                    ...fxRows(p, usdKrw),
                     ["오늘", day == null ? "-" : fmtPct(day), day == null ? "" : tone(day)],
                     ["비중", totalValue > 0 ? fmtPct(p.valueKrw / totalValue, false) : "-"],
                   ]}

@@ -79,3 +79,15 @@ describe("소수점 주식을 다 판 뒤", () => {
     }
   });
 });
+
+describe("환차손익", () => {
+  const t = (id: string, type: "BUY" | "SELL", price: number, fxRate: number, d: string) =>
+    ({ id, accountId: "a", symbol: "MU", name: "MU", market: "US", type, quantity: 10, price, fee: 0, tax: 0, fxRate, tradeDate: d }) as never;
+  it("매도 한 건의 원화 손익 = 주가손익 + 환차손익", () => {
+    const [e] = realizedEvents([t("1", "BUY", 100, 1300, "2026-01-01"), t("2", "SELL", 110, 1400, "2026-02-01")]);
+    expect(e.pnlKrw).toBe(240000);
+    expect(e.fxPnlKrw).toBe(100000);
+    expect(e.avgBuyFx).toBe(1300);
+    expect(e.fxRate).toBe(1400);
+  });
+});

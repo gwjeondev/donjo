@@ -44,6 +44,8 @@ export interface Position {
   realizedPnlKrw: number;
   /** 현지 통화 기준 실현손익 */
   realizedPnl: number;
+  /** 실현손익 중 환차손익 (원화): 판 수량의 매입금액 × 매도일 환율 − 매수일 환율로 환산한 매입금액 */
+  realizedFxKrw: number;
 }
 
 export const currencyOf = (market: Market): "KRW" | "USD" =>
@@ -81,6 +83,7 @@ export function computePositions(trades: Trade[]): Position[] {
         costBasisKrw: 0,
         realizedPnlKrw: 0,
         realizedPnl: 0,
+        realizedFxKrw: 0,
       };
       map.set(key(t), p);
     }
@@ -102,6 +105,7 @@ export function computePositions(trades: Trade[]): Position[] {
       const proceeds = qty * t.price - t.fee - t.tax;
       p.realizedPnl += proceeds - soldCost;
       p.realizedPnlKrw += proceeds * fx - soldCostKrw;
+      if (p.currency === "USD") p.realizedFxKrw += soldCost * fx - soldCostKrw;
       p.quantity -= qty;
       p.costBasis -= soldCost;
       p.costBasisKrw -= soldCostKrw;
@@ -230,6 +234,7 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
     m.grossCostKrw += p.grossCostKrw;
     m.realizedPnl += p.realizedPnl;
     m.realizedPnlKrw += p.realizedPnlKrw;
+    m.realizedFxKrw += p.realizedFxKrw;
     m.valueKrw += p.valueKrw;
     m.unrealizedPnlKrw += p.unrealizedPnlKrw;
     m.dayChangeKrw += p.dayChangeKrw;
@@ -240,6 +245,13 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
   }
   return [...map.values()];
 }
+
+/** 보유분의 환차손익 (원화): 매입금액(달러) × 현재 환율 − 매수일 환율로 환산한 매입금액. 해외 종목만 */
+export const unrealizedFxKrw = (p: Position, usdKrw: number) =>
+  p.currency === "USD" && p.quantity > 0 ? p.costBasis * usdKrw - p.costBasisKrw : 0;
+
+/** 평균 매수환율 (1달러 = n원). 해외 종목 보유분만 */
+export const avgBuyFxRate = (p: Position) => (p.currency === "USD" && p.quantity > 0 && p.costBasis > 0 ? p.costBasisKrw / p.costBasis : null);
 
 export type DisplayCurrency = "KRW" | "USD";
 

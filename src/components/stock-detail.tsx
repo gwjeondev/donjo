@@ -1,8 +1,8 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { fmtPct, fmtPrice, fmtQty, tone } from "@/lib/format";
-import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { DetailCard } from "./detail-card";
 
@@ -15,7 +15,9 @@ export function StockSummary({ position, usdKrw }: { position: ValuedPosition; u
   const realized = d.currency === "USD" ? position.realizedPnl : position.realizedPnlKrw;
   const dayRate = position.price != null && position.previousClose ? position.price / position.previousClose - 1 : null;
   const dayUsd = position.price != null && position.previousClose != null ? position.quantity * (position.price - position.previousClose) : 0;
-  const items = [
+  const buyFx = avgBuyFxRate(position);
+  const fxPnl = unrealizedFxKrw(position, usdKrw);
+  const items: { label: string; value: string; sub?: string; tone?: number }[] = [
     { label: "보유수량", value: `${fmtQty(position.quantity)}주` },
     { label: "평균단가", value: position.quantity > 0 ? fmtPrice(d.avgCost, d.currency) : "-" },
     { label: "평가금액", value: fmtPrice(d.value, d.currency) },
@@ -30,6 +32,16 @@ export function StockSummary({ position, usdKrw }: { position: ValuedPosition; u
       tone: d.pnl,
     },
     { label: "실현손익", value: signed(realized, d.currency), tone: realized },
+    // 환차손익은 원화 개념이라 통화 전환과 관계없이 원화로 보여 준다
+    ...(buyFx != null
+      ? [
+          { label: "환차손익", value: fmtSigned(fxPnl), sub: "보유분", tone: fxPnl },
+          { label: "평균 매수환율", value: fmtFx(buyFx) },
+        ]
+      : []),
+    ...(position.currency === "USD" && position.realizedFxKrw !== 0
+      ? [{ label: "실현 환차손익", value: fmtSigned(position.realizedFxKrw), tone: position.realizedFxKrw }]
+      : []),
   ];
   return (
     <section>
@@ -189,6 +201,12 @@ export function AccountBreakdown({
                 ["수익률", fmtPct(d.returnRate), tone(d.returnRate)],
                 ["보유수량", `${fmtQty(p.quantity)}주`],
                 ["평단가", fmtPrice(d.avgCost, d.currency)],
+                ...(avgBuyFxRate(p) != null
+                  ? ([
+                      ["환차손익", fmtSigned(unrealizedFxKrw(p, usdKrw)), tone(unrealizedFxKrw(p, usdKrw))],
+                      ["평균 매수환율", fmtFx(avgBuyFxRate(p)!)],
+                    ] as [string, string, string?][])
+                  : []),
               ]}
             />
           );

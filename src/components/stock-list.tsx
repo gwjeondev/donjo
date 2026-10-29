@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { fmtPct, fmtPrice, fmtQty, fmtSignedPrice, tone } from "@/lib/format";
-import { displayFigures, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, fmtSignedPrice, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
 import { HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { ChevronRightIcon } from "./icons";
@@ -53,6 +53,8 @@ export function StockList({ positions, sort: initialSort, usdKrw }: { positions:
             const d = displayFigures(p, currency, usdKrw);
             const usd = d.currency === "USD";
             const dayChange = usd ? p.quantity * ((p.price ?? 0) - (p.previousClose ?? 0)) : p.dayChangeKrw;
+            const buyFx = isSold ? null : avgBuyFxRate(p);
+            const fxPnl = unrealizedFxKrw(p, usdKrw);
             const realized = usd ? p.realizedPnl : p.realizedPnlKrw;
             return (
               <Link
@@ -83,6 +85,11 @@ export function StockList({ positions, sort: initialSort, usdKrw }: { positions:
                       </p>
                     )}
                   </>
+                )}
+                {buyFx != null && (
+                  <p className="mt-1 truncate text-xs text-ink-2">
+                    환차손익 <span className={tone(fxPnl)}>{fmtSigned(fxPnl)}</span> · 매수환율 {fmtFx(buyFx)}
+                  </p>
                 )}
                 <p className="mt-3 truncate text-xs text-muted">
                   {isSold ? "다 팔았어요" : `${fmtQty(p.quantity)}주`}

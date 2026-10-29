@@ -47,6 +47,10 @@ export interface RealizedEvent {
   pnlKrw: number;
   proceedsKrw: number;
   costKrw: number;
+  /** 원화 손익 중 환차손익 (해외만): 매입금액 × 매도일 환율 − 매수일 환율 기준 매입금액 */
+  fxPnlKrw: number;
+  /** 평균 매수환율 (해외만, 국내는 0) */
+  avgBuyFx: number;
   /** 매도일 환율 (국내 종목은 1) */
   fxRate: number;
   /** 손익 ÷ 매입금액 (원화 기준) */
@@ -99,6 +103,8 @@ export function realizedEvents(trades: Trade[]): RealizedEvent[] {
       pnlKrw: proceedsKrw - costKrw,
       proceedsKrw,
       costKrw,
+      fxPnlKrw: currency === "USD" ? cost * fx - costKrw : 0,
+      avgBuyFx: currency === "USD" && cost > 0 ? costKrw / cost : 0,
       fxRate: fx,
       returnRate: costKrw > 0 ? (proceedsKrw - costKrw) / costKrw : 0,
     });
