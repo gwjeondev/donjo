@@ -1,8 +1,8 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, tone } from "@/lib/format";
-import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, fmtSignedWithPct, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, unrealizedFxRate, type ValuedPosition } from "@/lib/portfolio";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { DetailCard } from "./detail-card";
 
@@ -35,7 +35,7 @@ export function StockSummary({ position, usdKrw }: { position: ValuedPosition; u
     // 환차손익은 원화 개념이라 통화 전환과 관계없이 원화로 보여 준다
     ...(buyFx != null
       ? [
-          { label: "환차손익", value: fmtSigned(fxPnl), sub: "보유분", tone: fxPnl },
+          { label: "환차손익", value: fmtSigned(fxPnl), sub: fmtPct(unrealizedFxRate(position, usdKrw)), tone: fxPnl },
           { label: "평균 매수환율", value: fmtFx(buyFx) },
         ]
       : []),
@@ -203,7 +203,7 @@ export function AccountBreakdown({
                 ["평단가", fmtPrice(d.avgCost, d.currency)],
                 ...(avgBuyFxRate(p) != null
                   ? ([
-                      ["환차손익", fmtSigned(unrealizedFxKrw(p, usdKrw)), tone(unrealizedFxKrw(p, usdKrw))],
+                      ["환차손익", fmtSignedWithPct(unrealizedFxKrw(p, usdKrw), unrealizedFxRate(p, usdKrw)), tone(unrealizedFxKrw(p, usdKrw))],
                       ["평균 매수환율", fmtFx(avgBuyFxRate(p)!)],
                     ] as [string, string, string?][])
                   : []),

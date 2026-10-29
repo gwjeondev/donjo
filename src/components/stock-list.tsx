@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, fmtSignedPrice, tone } from "@/lib/format";
-import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSignedPrice, fmtSignedWithPct, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, unrealizedFxRate, type ValuedPosition } from "@/lib/portfolio";
 import { HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
+import { CardStats, type DetailRow } from "./detail-card";
 import { ChevronRightIcon } from "./icons";
 import { SortControl } from "./sort-control";
 
@@ -55,6 +56,7 @@ export function StockList({ positions, sort: initialSort, usdKrw }: { positions:
             const dayChange = usd ? p.quantity * ((p.price ?? 0) - (p.previousClose ?? 0)) : p.dayChangeKrw;
             const buyFx = isSold ? null : avgBuyFxRate(p);
             const fxPnl = unrealizedFxKrw(p, usdKrw);
+            const fxRate = unrealizedFxRate(p, usdKrw);
             const realized = usd ? p.realizedPnl : p.realizedPnlKrw;
             return (
               <Link
@@ -62,40 +64,37 @@ export function StockList({ positions, sort: initialSort, usdKrw }: { positions:
                 href={`/stocks/${encodeURIComponent(p.symbol)}`}
                 className={`card block min-w-0 p-5 transition hover:border-brand/50 ${isSold ? "opacity-70" : ""}`}
               >
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <h2 className="min-w-0 truncate font-semibold" title={p.name}>
                     {p.name}
                   </h2>
                   <ChevronRightIcon className="size-4 shrink-0 text-muted" />
                 </div>
+                <p className="mt-0.5 truncate text-xs text-muted">{isSold ? "다 팔았어요" : `${fmtQty(p.quantity)}주`}</p>
                 {isSold ? (
                   <p className="mt-3 text-2xl font-bold text-muted">보유 없음</p>
                 ) : (
                   <>
                     <p className="mt-3 text-2xl font-bold">{fmtPrice(d.value, d.currency)}</p>
-                    <p className={`mt-1 text-sm ${tone(d.pnl)}`}>
+                    <p className={`mt-1 text-sm font-medium ${tone(d.pnl)}`}>
                       {fmtSignedPrice(d.pnl, d.currency)} ({fmtPct(d.returnRate)})
                     </p>
-                    {day != null && (
-                      <p className="mt-1 truncate text-xs text-ink-2">
-                        오늘{" "}
-                        <span className={tone(dayChange)}>
-                          {fmtSignedPrice(dayChange, d.currency)} ({fmtPct(day)})
-                        </span>
-                      </p>
-                    )}
                   </>
                 )}
-                {buyFx != null && (
-                  <p className="mt-1 truncate text-xs text-ink-2">
-                    환차손익 <span className={tone(fxPnl)}>{fmtSigned(fxPnl)}</span> · 매수환율 {fmtFx(buyFx)}
-                  </p>
-                )}
-                <p className="mt-3 truncate text-xs text-muted">
-                  {isSold ? "다 팔았어요" : `${fmtQty(p.quantity)}주`}
-{" "}
-                  · 실현손익 <span className={tone(realized)}>{fmtSignedPrice(realized, d.currency)}</span>
-                </p>
+                <CardStats
+                  rows={[
+                    ...(!isSold && day != null
+                      ? ([["오늘", `${fmtSignedPrice(dayChange, d.currency)} (${fmtPct(day)})`, tone(dayChange)]] as DetailRow[])
+                      : []),
+                    ...(buyFx != null
+                      ? ([
+                          ["환차손익", fmtSignedWithPct(fxPnl, fxRate), tone(fxPnl)],
+                          ["평균 매수환율", fmtFx(buyFx)],
+                        ] as DetailRow[])
+                      : []),
+                    ["실현손익", fmtSignedPrice(realized, d.currency), tone(realized)],
+                  ]}
+                />
               </Link>
             );
           })}

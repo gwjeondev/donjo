@@ -13,6 +13,8 @@ export const fmtPrice = (n: number, currency: "KRW" | "USD") =>
   currency === "USD" ? `$${usd.format(n)}` : fmtKrw(n);
 /** 환율 (1달러 = n원), 소수 둘째 자리까지 */
 export const fmtFx = (n: number) => `${n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원`;
+/** 부호 붙인 원화 금액 + 비율: +1,234원 (+1.23%) */
+export const fmtSignedWithPct = (n: number, r: number) => `${n > 0 ? "+" : ""}${krw.format(Math.round(n))}원 (${fmtPct(r)})`;
 export const fmtQty = (n: number) => qty.format(n);
 export const fmtPct = (r: number, signed = true) =>
   `${signed && r > 0 ? "+" : ""}${(r * 100).toFixed(2)}%`;

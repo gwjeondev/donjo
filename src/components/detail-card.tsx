@@ -90,6 +90,21 @@ export function DetailCard({
   );
 }
 
+/** 카드 아래쪽 항목 목록: 이름표는 왼쪽, 값은 오른쪽 (종목·계좌 카드 공용) */
+export function CardStats({ rows }: { rows: DetailRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <dl className="mt-4 space-y-2 border-t border-line pt-3 text-xs">
+      {rows.map(([label, v, cls = ""]) => (
+        <div key={label} className="flex items-baseline justify-between gap-3">
+          <dt className="shrink-0 whitespace-nowrap text-muted">{label}</dt>
+          <dd className={`min-w-0 truncate text-right ${cls}`}>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 /** 표 안에서 다른 화면으로 가는 이름: 이름 뒤에 › 를 붙여 눌러서 이동할 수 있다는 걸 보여 준다 */
 export function NameLink({ href, children, title, className = "" }: { href: string; children: React.ReactNode; title?: string; className?: string }) {
   return (

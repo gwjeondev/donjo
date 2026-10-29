@@ -1,10 +1,13 @@
 "use client";
 
-import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, fmtSignedPrice, tone } from "@/lib/format";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, fmtSignedPrice, fmtSignedWithPct, tone } from "@/lib/format";
 import { dividendNetKrw, type Dividend, type RealizedEvent } from "@/lib/income";
 import { useDisplayCurrency } from "./currency";
 import { DetailCard, type DetailRow } from "./detail-card";
-import { HEAD, StockCell, TABLE, th } from "./income-lists";
+import { HEAD, TABLE, th } from "./income-lists";
+
+/** 실현손익 표는 칸 사이를 좁혀 종목명이 더 보이게 (첫·끝 칸 바깥 여백은 유지) */
+const TIGHT = "[&_td]:px-2 [&_th]:px-2 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4";
 
 /** 해외 종목 한 건을 고른 통화로: 원화는 매도가 = 매도일 환율, 평단가·손익 = 기록한 매수·매도 환율로 환산한 값 */
 function view(e: RealizedEvent, currency: "KRW" | "USD") {
@@ -20,18 +23,16 @@ export function RealizedList({ events, accountName, showAccount }: { events: Rea
   const hasUs = events.some((e) => e.currency === "USD");
   return (
     <div className="card overflow-hidden">
-      <table className={TABLE}>
+      <table className={`${TABLE} ${TIGHT}`}>
         <thead className={HEAD}>
           <tr>
             <th className={`${th("w-32", "left")} pl-4`}>매도일</th>
-            {showAccount && <th className={th("w-28", "left")}>계좌</th>}
+            {showAccount && <th className={th("w-24", "left")}>계좌</th>}
             <th className={th("", "left")}>종목</th>
-            <th className={th("w-28")}>수량</th>
-            <th className={th("w-32")}>매도가</th>
-            <th className={th("w-32")}>평단가</th>
-            <th className={th("w-36")}>실현손익</th>
-            {hasUs && <th className={th("w-40")}>환차손익</th>}
-            <th className={`${th("w-24")} pr-4`}>수익률</th>
+            <th className={th("w-32")}>매도가 / 평단</th>
+            <th className={th("w-32")}>실현손익</th>
+            {hasUs && <th className={th("w-36")}>환차손익</th>}
+            {hasUs && <th className={`${th("w-28")} pr-4`}>매수 / 매도환율</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -39,22 +40,36 @@ export function RealizedList({ events, accountName, showAccount }: { events: Rea
             <tr key={e.tradeId} className="hover:bg-surface-2/60">
               <td className="py-3 pl-4 pr-3 text-ink-2">{e.date}</td>
               {showAccount && <td className="truncate px-3 py-3 text-ink-2">{accountName[e.accountId]}</td>}
-              <StockCell name={e.name} />
-              <td className="px-3 py-3 text-right">{fmtQty(e.quantity)}</td>
-              <td className="px-3 py-3 text-right">{fmtPrice(v.price, v.cur)}</td>
-              <td className="px-3 py-3 text-right text-ink-2">{fmtPrice(v.avgCost, v.cur)}</td>
-              <td className={`px-3 py-3 text-right font-medium ${tone(v.pnl)}`}>{fmtSignedPrice(v.pnl, v.cur)}</td>
+              <td className="px-3 py-3" title={e.name}>
+                <span className="block truncate">{e.name}</span>
+                <div className="text-xs text-muted">{fmtQty(e.quantity)}주</div>
+              </td>
+              <td className="px-3 py-3 text-right">
+                <div>{fmtPrice(v.price, v.cur)}</div>
+                <div className="text-xs text-muted">{fmtPrice(v.avgCost, v.cur)}</div>
+              </td>
+              <td className={`px-3 py-3 text-right ${tone(v.pnl)}`}>
+                <div className="font-medium">{fmtSignedPrice(v.pnl, v.cur)}</div>
+                <div className="text-xs">{fmtPct(v.rate)}</div>
+              </td>
               {hasUs &&
                 (e.currency === "USD" ? (
-                  <td className="px-3 py-3 text-right">
-                    <div className={tone(e.fxPnlKrw)}>{fmtSigned(e.fxPnlKrw)}</div>
-                    <div className="text-xs text-muted">매수 {fmtFx(e.avgBuyFx)}</div>
-                    <div className="text-xs text-muted">매도 {fmtFx(e.fxRate)}</div>
+                  <td className={`px-3 py-3 text-right ${tone(e.fxPnlKrw)}`}>
+                    <div>{fmtSigned(e.fxPnlKrw)}</div>
+                    <div className="text-xs">{fmtPct(e.fxPnlRate)}</div>
                   </td>
                 ) : (
                   <td className="px-3 py-3 text-right text-muted">-</td>
                 ))}
-              <td className={`py-3 pl-3 pr-4 text-right ${tone(v.rate)}`}>{fmtPct(v.rate)}</td>
+              {hasUs &&
+                (e.currency === "USD" ? (
+                  <td className="py-3 pl-3 pr-4 text-right text-xs text-ink-2">
+                    <div>{fmtFx(e.avgBuyFx)}</div>
+                    <div>{fmtFx(e.fxRate)}</div>
+                  </td>
+                ) : (
+                  <td className="py-3 pl-3 pr-4 text-right text-muted">-</td>
+                ))}
             </tr>
           ))}
         </tbody>
@@ -74,7 +89,7 @@ export function RealizedList({ events, accountName, showAccount }: { events: Rea
               ["평단가", fmtPrice(v.avgCost, v.cur)],
               ...(e.currency === "USD"
                 ? ([
-                    ["환차손익", fmtSigned(e.fxPnlKrw), tone(e.fxPnlKrw)],
+                    ["환차손익", fmtSignedWithPct(e.fxPnlKrw, e.fxPnlRate), tone(e.fxPnlKrw)],
                     ["평균 매수환율", fmtFx(e.avgBuyFx)],
                     ["평균 매도환율", fmtFx(e.fxRate)],
                   ] as DetailRow[])

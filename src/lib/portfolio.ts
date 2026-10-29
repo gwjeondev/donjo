@@ -250,6 +250,9 @@ export function mergeBySymbol(positions: ValuedPosition[]): ValuedPosition[] {
 export const unrealizedFxKrw = (p: Position, usdKrw: number) =>
   p.currency === "USD" && p.quantity > 0 ? p.costBasis * usdKrw - p.costBasisKrw : 0;
 
+/** 보유분 환차손익률: 환차손익 ÷ 원화 매입금액 (= 현재 환율 ÷ 평균 매수환율 − 1) */
+export const unrealizedFxRate = (p: Position, usdKrw: number) => (p.costBasisKrw > 0 ? unrealizedFxKrw(p, usdKrw) / p.costBasisKrw : 0);
+
 /** 평균 매수환율 (1달러 = n원). 해외 종목 보유분만 */
 export const avgBuyFxRate = (p: Position) => (p.currency === "USD" && p.quantity > 0 && p.costBasis > 0 ? p.costBasisKrw / p.costBasis : null);
 

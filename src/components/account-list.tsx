@@ -5,6 +5,7 @@ import { useState } from "react";
 import { fmtKrw, fmtPct, fmtSigned, tone } from "@/lib/format";
 import type { Summary } from "@/lib/portfolio";
 import { ACCOUNT_SORTS, sortBy, type AccountSortKey, type Sort } from "@/lib/prefs";
+import { CardStats, type DetailRow } from "./detail-card";
 import { ChevronRightIcon } from "./icons";
 import { SortControl } from "./sort-control";
 
@@ -43,7 +44,7 @@ export function AccountList({ accounts, sort: initialSort }: { accounts: Account
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((a) => (
           <Link key={a.id} href={`/accounts/${a.id}`} className="card block p-5 transition hover:border-brand/50">
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="truncate font-semibold">{a.name}</h2>
               <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted">
                 {a.broker ?? ""}
@@ -51,22 +52,26 @@ export function AccountList({ accounts, sort: initialSort }: { accounts: Account
               </span>
             </div>
             <p className="mt-3 text-2xl font-bold">{fmtKrw(a.summary.valueKrw + (a.cashKrw ?? 0))}</p>
-            <p className={`mt-1 text-sm ${tone(a.summary.unrealizedPnlKrw)}`}>
+            <p className={`mt-1 text-sm font-medium ${tone(a.summary.unrealizedPnlKrw)}`}>
               {fmtSigned(a.summary.unrealizedPnlKrw)} ({fmtPct(a.summary.returnRate)})
             </p>
-            {/* 오늘 등락: 어제 종가 기준 주식 평가금액 대비 (종목 카드·총자산 카드와 같은 기준) */}
-            {a.summary.valueKrw - a.summary.dayChangeKrw > 0 && (
-              <p className="mt-1 truncate text-xs text-ink-2">
-                오늘{" "}
-                <span className={tone(a.summary.dayChangeKrw)}>
-                  {fmtSigned(a.summary.dayChangeKrw)} ({fmtPct(a.summary.dayChangeKrw / (a.summary.valueKrw - a.summary.dayChangeKrw))})
-                </span>
-              </p>
-            )}
-            <p className="mt-3 text-xs text-muted">
-              보유 {a.count}종목{a.cashKrw != null && <> · 현금 {fmtKrw(a.cashKrw)}</>} · 실현손익{" "}
-              <span className={tone(a.summary.realizedPnlKrw)}>{fmtSigned(a.summary.realizedPnlKrw)}</span>
-            </p>
+            <CardStats
+              rows={[
+                // 오늘 등락: 어제 종가 기준 주식 평가금액 대비 (종목 카드·총자산 카드와 같은 기준)
+                ...(a.summary.valueKrw - a.summary.dayChangeKrw > 0
+                  ? ([
+                      [
+                        "오늘",
+                        `${fmtSigned(a.summary.dayChangeKrw)} (${fmtPct(a.summary.dayChangeKrw / (a.summary.valueKrw - a.summary.dayChangeKrw))})`,
+                        tone(a.summary.dayChangeKrw),
+                      ],
+                    ] as DetailRow[])
+                  : []),
+                ["보유 종목", `${a.count}개`],
+                ...(a.cashKrw != null ? ([["현금", fmtKrw(a.cashKrw)]] as DetailRow[]) : []),
+                ["실현손익", fmtSigned(a.summary.realizedPnlKrw), tone(a.summary.realizedPnlKrw)],
+              ]}
+            />
           </Link>
         ))}
       </div>

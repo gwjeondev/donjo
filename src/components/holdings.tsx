@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSigned, MARKET_LABEL, tone } from "@/lib/format";
-import { avgBuyFxRate, displayFigures, unrealizedFxKrw, type ValuedPosition } from "@/lib/portfolio";
+import { fmtFx, fmtPct, fmtPrice, fmtQty, fmtSignedWithPct, MARKET_LABEL, tone } from "@/lib/format";
+import { avgBuyFxRate, displayFigures, unrealizedFxKrw, unrealizedFxRate, type ValuedPosition } from "@/lib/portfolio";
 import { DEFAULT_PREFS, HOLDING_SORTS, sortBy, type HoldingSortKey, type Sort } from "@/lib/prefs";
 import { CurrencyToggle, useDisplayCurrency } from "./currency";
 import { DetailCard, NameLink } from "./detail-card";
@@ -38,7 +38,7 @@ function FxCell({ p, usdKrw }: { p: ValuedPosition; usdKrw: number }) {
   const fx = unrealizedFxKrw(p, usdKrw);
   return (
     <td className="px-3 py-3 text-right">
-      <div className={tone(fx)}>{fmtSigned(fx)}</div>
+      <div className={tone(fx)}>{fmtSignedWithPct(fx, unrealizedFxRate(p, usdKrw))}</div>
       <div className="text-xs text-muted">매수 {fmtFx(rate)}</div>
     </td>
   );
@@ -50,7 +50,7 @@ const fxRows = (p: ValuedPosition, usdKrw: number): [string, string, string?][] 
   if (rate == null) return [];
   const fx = unrealizedFxKrw(p, usdKrw);
   return [
-    ["환차손익", fmtSigned(fx), tone(fx)],
+    ["환차손익", fmtSignedWithPct(fx, unrealizedFxRate(p, usdKrw)), tone(fx)],
     ["평균 매수환율", fmtFx(rate)],
   ];
 };
@@ -105,7 +105,7 @@ export function Holdings({
                 <th className="w-36 px-3 py-2.5 text-right font-medium">현재가 / 평단</th>
                 <th className="w-40 px-3 py-2.5 text-right font-medium">평가금액</th>
                 <th className="w-40 px-3 py-2.5 text-right font-medium">평가손익</th>
-                {hasUs && <th className="w-32 px-3 py-2.5 text-right font-medium">환차손익</th>}
+                {hasUs && <th className="w-48 px-3 py-2.5 text-right font-medium">환차손익</th>}
                 <th className="hidden w-24 px-4 py-2.5 text-right font-medium xl:table-cell">비중</th>
               </tr>
             </thead>
