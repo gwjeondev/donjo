@@ -211,11 +211,17 @@ export const MARKET_INDICES = [
   { symbol: "DX-Y.NYB", label: "달러 지수", kind: "index" },
   // 미 국채 10년물 금리 (%). 변동은 비율이 아니라 금리 차이(%p)로 본다
   { symbol: "^TNX", label: "미 국채 10년", kind: "yield" },
+  // 원자재 선물 (달러)
+  { symbol: "CL=F", label: "WTI 원유", kind: "index", prefix: "$" },
+  { symbol: "BZ=F", label: "브렌트유", kind: "index", prefix: "$" },
+  { symbol: "GC=F", label: "금", kind: "index", prefix: "$" },
 ] as const;
 
 export interface IndexMove {
   label: string;
   kind: "index" | "yield";
+  /** 값 앞에 붙일 표시 ($ 등) */
+  prefix?: string;
   price: number;
   /** 지금 변동: 지수는 현재가 ÷ 전일 종가 − 1, 금리는 현재 − 전일 (%p). 장이 닫혀 있으면 마지막 거래일의 변동 */
   now: number | null;
@@ -223,12 +229,14 @@ export interface IndexMove {
   prev: number | null;
 }
 
-/** 코스피·나스닥 100·S&P 500·달러 지수·미 국채 10년 금리의 전날과 지금 변동. 일봉이 아직 없으면 전날 변동만 비운다 */
+/** 코스피·나스닥 100·S&P 500·달러 지수·미 국채 10년 금리·WTI·브렌트유·금의 전날과 지금 변동. 일봉이 아직 없으면 전날 변동만 비운다 */
 export async function getIndexMoves(): Promise<IndexMove[]> {
   const symbols = MARKET_INDICES.map((i) => i.symbol);
   const [quotes, series] = await Promise.all([getQuotes(symbols, undefined, { background: true }), getPriceSeries(symbols, addDays(todayStr(), -14))]);
   const moves: IndexMove[] = [];
-  for (const { symbol, label, kind } of MARKET_INDICES) {
+  for (const item of MARKET_INDICES) {
+    const { symbol, label, kind } = item;
+    const prefix = "prefix" in item ? item.prefix : undefined;
     const move = (to: number, from: number) => (kind === "yield" ? to - from : to / from - 1);
     const q = quotes.get(symbol);
     if (!q) continue;
@@ -240,6 +248,7 @@ export async function getIndexMoves(): Promise<IndexMove[]> {
     moves.push({
       label,
       kind,
+      prefix,
       price: q.price,
       now: prevClose ? move(q.price, prevClose) : null,
       prev: prevClose && at > 0 ? move(prevClose, closes[at - 1]) : null,
