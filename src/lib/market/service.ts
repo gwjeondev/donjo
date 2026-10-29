@@ -203,6 +203,51 @@ export async function getPriceSeries(symbols: string[], from: string, doneAt?: M
   return series;
 }
 
+/** 대시보드에 보여 줄 시장 지수 */
+export const MARKET_INDICES = [
+  { symbol: "^KS11", label: "코스피", kind: "index" },
+  { symbol: "^NDX", label: "나스닥 100", kind: "index" },
+  { symbol: "^GSPC", label: "S&P 500", kind: "index" },
+  { symbol: "DX-Y.NYB", label: "달러 지수", kind: "index" },
+  // 미 국채 10년물 금리 (%). 변동은 비율이 아니라 금리 차이(%p)로 본다
+  { symbol: "^TNX", label: "미 국채 10년", kind: "yield" },
+] as const;
+
+export interface IndexMove {
+  label: string;
+  kind: "index" | "yield";
+  price: number;
+  /** 지금 변동: 지수는 현재가 ÷ 전일 종가 − 1, 금리는 현재 − 전일 (%p). 장이 닫혀 있으면 마지막 거래일의 변동 */
+  now: number | null;
+  /** 전날 변동: 지수는 전일 종가 ÷ 그 전 종가 − 1, 금리는 차이 (%p) */
+  prev: number | null;
+}
+
+/** 코스피·나스닥 100·S&P 500·달러 지수·미 국채 10년 금리의 전날과 지금 변동. 일봉이 아직 없으면 전날 변동만 비운다 */
+export async function getIndexMoves(): Promise<IndexMove[]> {
+  const symbols = MARKET_INDICES.map((i) => i.symbol);
+  const [quotes, series] = await Promise.all([getQuotes(symbols, undefined, { background: true }), getPriceSeries(symbols, addDays(todayStr(), -14))]);
+  const moves: IndexMove[] = [];
+  for (const { symbol, label, kind } of MARKET_INDICES) {
+    const move = (to: number, from: number) => (kind === "yield" ? to - from : to / from - 1);
+    const q = quotes.get(symbol);
+    if (!q) continue;
+    const prevClose = q.previousClose;
+    const closes = [...(series.get(symbol) ?? new Map<string, number>()).entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, c]) => c);
+    // 일봉 중 전일 종가와 같은 날을 찾아, 그 바로 앞 종가와 비교한다
+    let at = -1;
+    if (prevClose) for (let i = closes.length - 1; i >= 0; i--) if (Math.abs(closes[i] - prevClose) <= Math.abs(prevClose) * 1e-4) { at = i; break; }
+    moves.push({
+      label,
+      kind,
+      price: q.price,
+      now: prevClose ? move(q.price, prevClose) : null,
+      prev: prevClose && at > 0 ? move(prevClose, closes[at - 1]) : null,
+    });
+  }
+  return moves;
+}
+
 /** 특정 날짜의 원달러 환율 (거래 입력 시 기본값) */
 export async function getUsdKrwOn(date: string): Promise<number | null> {
   if (date >= todayStr()) return (await getUsdKrw()).rate;
